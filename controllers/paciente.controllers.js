@@ -31,8 +31,16 @@ const isOnTime = (date) => {
 pacienteController.register = async (req, res) => {
   const t = await sequelize.transaction();
   try {
-    const { nss, correo, telefono, nombre, ap_paterno, ap_materno, password } =
-      req.body;
+    const {
+      nss,
+      correo,
+      telefono,
+      nombre,
+      ap_paterno,
+      ap_materno,
+      password,
+      metodo_pago,
+    } = req.body;
 
     await Usuario.create(
       {
@@ -51,6 +59,7 @@ pacienteController.register = async (req, res) => {
         nss: nss,
         correo: correo,
         telefono: telefono,
+        metodo_pago: metodo_pago,
       },
       { transaction: t }
     );
@@ -81,7 +90,7 @@ pacienteController.showAppointment = async (req, res) => {
       where: {
         no_empleado: noEmpleadosUnicos,
       },
-      attributes: ["no_empleado"],
+      attributes: ["no_empleado", "consultorio", "especialidad"],
       include: {
         model: Usuario,
         attributes: ["nombre", "ap_paterno", "ap_materno"],
@@ -95,8 +104,6 @@ pacienteController.showAppointment = async (req, res) => {
 
     const citasFormateadas = citas_paciente.map((cita) => {
       const { id, fecha_hora_inicio, fecha_hora_final, no_empleado } = cita;
-      const fechaInicio = formatDateTime(fecha_hora_inicio).split(/[ ,:]+/);
-      const fechaFinal = formatDateTime(fecha_hora_final).split(/[ ,:]+/);
 
       const medico = medicosMap[no_empleado];
       const { nombre, ap_paterno, ap_materno } = medico.Usuario;
@@ -104,11 +111,8 @@ pacienteController.showAppointment = async (req, res) => {
       return {
         id,
         medico: nombre + " " + ap_paterno + " " + ap_materno,
-        fecha_hora_inicio: [
-          fechaInicio[0],
-          fechaInicio[1] + ":" + fechaInicio[2],
-        ],
-        hora_final: fechaFinal[1] + ":" + fechaFinal[2],
+        fecha_hora_inicio: fecha_hora_inicio,
+        fecha_hora_final: fecha_hora_final,
         onTime: isOnTime(fecha_hora_inicio),
       };
     });

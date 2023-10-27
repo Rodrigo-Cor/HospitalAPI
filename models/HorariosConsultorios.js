@@ -1,11 +1,11 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../utils/database.util");
-
+const Consultorio = require("./Consultorios");
 const HorarioConsultorio = sequelize.define(
   "HorariosConsultorios",
   {
     id: {
-      type: DataTypes.NUMBER,
+      type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
     },
@@ -43,5 +43,6 @@ const HorarioConsultorio = sequelize.define(
     tableName: "HorariosConsultorios",
   }
 );
+
 
 module.exports = HorarioConsultorio;

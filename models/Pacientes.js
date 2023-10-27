@@ -19,7 +19,11 @@ const Paciente = sequelize.define(
     },
     telefono: {
       type: DataTypes.STRING(10),
-      allowNull: true,
+      allowNull: false,
+    },
+    metodo_pago: {
+      type: DataTypes.STRING(16),
+      allowNull: false,
     },
   },
   {

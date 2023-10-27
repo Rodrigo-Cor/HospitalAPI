@@ -1,11 +1,12 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../utils/database.util");
+const HorarioConsultorio = require("./HorariosConsultorios");
 
 const Consultorio = sequelize.define(
   "Consultorios",
   {
     consultorio: {
-      type: DataTypes.NUMBER,
+      type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
     },
@@ -24,5 +25,7 @@ const Consultorio = sequelize.define(
     tableName: "Consultorios",
   }
 );
+
+Consultorio.hasMany(HorarioConsultorio, { foreignKey: "consultorio" });
 
 module.exports = Consultorio;

@@ -1,6 +1,9 @@
 const crypto = require("crypto-js");
 
 const Usuario = require("../models/Usuarios.js");
+const Paciente = require("../models/Pacientes.js");
+const Medico = require("../models/Medicos.js");
+const Recepcionista = require("../models/Recepcionistas.js");
 const sequelize = require("../utils/database.util");
 
 const userController = {};
@@ -14,20 +17,21 @@ const hashPassword = (password) => {
 };
 
 userController.obtenerUsuarios = async (req, res) => {
-    try {
-      const usuarios = await Usuario.findAll();
-      return res.json(usuarios);
-    } catch (error) {
-      console.error('Error al obtener usuarios:', error);
-      return res.status(500).json({ message: 'Error al obtener usuarios' });
-    }
-  };
-  
+  try {
+    const usuarios = await Usuario.findAll();
+    return res.json(usuarios);
+  } catch (error) {
+    console.error("Error al obtener usuarios:", error);
+    return res.status(500).json({ message: "Error al obtener usuarios" });
+  }
+};
+
 userController.verifyUser = async (req, res) => {
   const { nombre } = req.body;
   try {
     const Usuario = await Usuario.findOne({ where: { nombre: nombre } });
-    if (Usuario) return res.status(400).json({ message: "El usuario ya existe" });
+    if (Usuario)
+      return res.status(400).json({ message: "El usuario ya existe" });
 
     return res.json({ message: "Usuario disponible" });
   } catch (error) {
@@ -42,7 +46,7 @@ userController.getConnection = async (req, res) => {
     console.log(process.env.Usuario);
     console.log(process.env.PASSWORD);
     await sequelize.authenticate();
-    
+
     return res.json({ message: "Conexión exitosa" });
   } catch (error) {
     return res.status(500).json({ message: "Error en el servidor" });
@@ -50,21 +54,53 @@ userController.getConnection = async (req, res) => {
 };
 
 userController.loginUser = async (req, res) => {
-  const { correo, password } = req.body;
+  const { correo, password, typeUser } = req.body;
+  console.log(req.body);
   try {
-    const user = await Usuario.findOne({ where: { correo: correo } });
-    
+    const user = await Usuario.findOne({
+      where: { correo: correo },
+      attributes: ["nombre", "ap_paterno", "ap_materno", "password"],
+    });
+
     if (!user) {
       return res.status(400).json({ message: "Registrate por favor" });
     }
 
-    const isMatch = user.password === hashPassword(password); 
+    const isMatch = user.password === hashPassword(password);
     if (!isMatch) {
       return res.status(401).json({ message: "Contraseña incorrecta" });
     }
-    
-    return res.status(200).end();
+
+    if (typeUser === "patient") {
+      const dataUser = await Paciente.findOne({
+        where: { correo: correo },
+        attributes: { exclude: ["correo"] },
+      });
+
+      delete user.dataValues.password;
+
+      return res.json({ ...user.dataValues, ...dataUser.dataValues });
+    } else if (typeUser === "doctor") {
+      const dataUser = await Medico.findOne({
+        where: { correo: correo },
+        attributes: { exclude: ["correo"] },
+      });
+
+      delete user.dataValues.password;
+
+      return res.json({ ...user.dataValues, ...dataUser.dataValues });
+    } else {
+      const dataUser = await Recepcionista.findOne({
+        where: { correo: correo },
+        attributes: { exclude: ["correo"] },
+      });
+
+      delete user.dataValues.password;
+
+      return res.json({ ...user.dataValues, ...dataUser.dataValues });
+    }
   } catch (error) {
+    console.log(error);
     return res.status(500).json({ message: "Error en el servidor" });
   }
 };

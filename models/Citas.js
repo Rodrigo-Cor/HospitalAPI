@@ -5,7 +5,7 @@ const Cita = sequelize.define(
   "Citas",
   {
     id: {
-      type: DataTypes.NUMBER,
+      type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
     },

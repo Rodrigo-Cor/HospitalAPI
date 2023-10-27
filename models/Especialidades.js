@@ -1,6 +1,5 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../utils/database.util");
-
 const Especialidad = sequelize.define(
   "Especialidades",
   {
