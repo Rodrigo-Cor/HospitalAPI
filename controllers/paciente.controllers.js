@@ -74,50 +74,57 @@ pacienteController.register = async (req, res) => {
   }
 };
 
+const fetchAppointmentsPatients = async (nss) => {
+  return await Cita.findAll({
+    where: {
+      nss: nss,
+    },
+    attributes: ["id", "id_horario", "pagado"],
+    include: {
+      model: HorarioConsultorio,
+      attributes: ["fecha_hora_inicio", "fecha_hora_final", "consultorio"],
+      order: [["fecha_hora_inicio", "ASC"]],
+    },
+  });
+};
+
+const fetchDoctorsWithConsultorios = async (consultoriosUnicos) => {
+  return await Medico.findAll({
+    where: {
+      consultorio: consultoriosUnicos,
+    },
+    attributes: ["especialidad", "consultorio"],
+    include: {
+      model: Usuario,
+      attributes: ["nombre", "ap_paterno", "ap_materno"],
+    },
+  });
+};
+
 pacienteController.showAppointment = async (req, res) => {
   try {
     const { nss } = req.body;
 
-    const citas_paciente = await Cita.findAll({
-      where: {
-        nss: nss,
-      },
-      order: [["fecha_hora_inicio", "ASC"]],
-      attributes: [
-        "id",
-        "fecha_hora_inicio",
-        "fecha_hora_final",
-        "no_empleado",
-        "pagado",
-      ],
-    });
+    const appointmentsPatient = await fetchAppointmentsPatients(nss);
 
-    console.log(citas_paciente);
-
-    const noEmpleadosUnicos = Array.from(
-      new Set(citas_paciente.map(({ no_empleado }) => no_empleado))
+    const consultoriosUnicos = Array.from(
+      new Set(
+        appointmentsPatient.map(
+          ({ HorariosConsultorio: { consultorio } }) => consultorio
+        )
+      )
     );
 
-    const medicos = await Medico.findAll({
-      where: {
-        no_empleado: noEmpleadosUnicos,
-      },
-      attributes: ["no_empleado", "consultorio", "especialidad"],
-      include: {
-        model: Usuario,
-        attributes: ["nombre", "ap_paterno", "ap_materno"],
-      },
-    });
+    const doctorsInfo = await fetchDoctorsWithConsultorios(consultoriosUnicos);
 
     const medicosMap = {};
-    medicos.forEach(
+    doctorsInfo.forEach(
       ({
-        no_empleado,
         consultorio,
         especialidad,
         Usuario: { nombre, ap_paterno, ap_materno },
       }) => {
-        medicosMap[no_empleado] = {
+        medicosMap[consultorio] = {
           consultorio,
           especialidad,
           nombre,
@@ -127,16 +134,23 @@ pacienteController.showAppointment = async (req, res) => {
       }
     );
 
-    const citasFormateadas = citas_paciente.map((cita) => {
-      const { id, fecha_hora_inicio, fecha_hora_final, no_empleado, pagado } =
-        cita;
+    const appointmentsInfoPatient = appointmentsPatient.map((appointment) => {
+      const {
+        id,
+        id_horario,
+        pagado,
+        HorariosConsultorio: {
+          consultorio,
+          fecha_hora_inicio,
+          fecha_hora_final,
+        },
+      } = appointment;
 
-      console.log(cita);
-
-      const { consultorio, especialidad, nombre, ap_paterno, ap_materno } =
-        medicosMap[no_empleado];
+      const { especialidad, nombre, ap_paterno, ap_materno } =
+        medicosMap[consultorio];
       return {
         id,
+        id_horario,
         medico: nombre + " " + ap_paterno + " " + ap_materno,
         consultorio,
         especialidad,
@@ -147,7 +161,7 @@ pacienteController.showAppointment = async (req, res) => {
       };
     });
 
-    return res.json(citasFormateadas);
+    return res.json(appointmentsInfoPatient);
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -156,11 +170,10 @@ pacienteController.showAppointment = async (req, res) => {
 pacienteController.deleteAppointment = async (req, res) => {
   const t = await sequelize.transaction();
   try {
-    const { id, consultorio, fecha_hora_inicio, fecha_hora_final } = req.body;
-    console.log(id, consultorio, fecha_hora_inicio, fecha_hora_final);
+    const { id, id_horario } = req.body;
     await Cita.destroy({
       where: {
-        id,
+        id: id,
       },
       transaction: t,
     });
@@ -171,9 +184,7 @@ pacienteController.deleteAppointment = async (req, res) => {
       },
       {
         where: {
-          consultorio: consultorio,
-          fecha_hora_inicio: fecha_hora_inicio,
-          fecha_hora_final: fecha_hora_final,
+          id: id_horario,
         },
       },
       { transaction: t }

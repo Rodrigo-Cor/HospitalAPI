@@ -6,6 +6,7 @@ const Cita = require("../models/Citas.js");
 const Usuario = require("../models/Usuarios.js");
 const Consultorio = require("../models/Consultorios.js");
 const sequelize = require("../utils/database.util");
+const HorarioConsultorio = require("../models/HorariosConsultorios.js");
 
 const medicoController = {};
 
@@ -72,43 +73,59 @@ medicoController.register = async (req, res) => {
   }
 };
 
+const fetchAppointmentInfo = async (consultorio) =>
+  await Cita.findAll({
+    attributes: ["nss", "id_horario", "id"],
+    include: {
+      model: HorarioConsultorio,
+      where: {
+        consultorio: consultorio,
+        disponible: false,
+      },
+      attributes: ["fecha_hora_inicio", "fecha_hora_final"],
+      order: [["fecha_hora_inicio", "ASC"]],
+    },
+  });
+
+const fetchPatientInfo = async (nssPatients) =>
+  await Paciente.findAll({
+    where: {
+      nss: nssPatients,
+    },
+    attributes: ["nss"],
+    include: {
+      model: Usuario,
+      attributes: ["nombre", "ap_paterno", "ap_materno"],
+    },
+  });
+
 medicoController.showAppointment = async (req, res) => {
   try {
-    const { no_empleado } = req.body;
+    const { consultorio } = req.body;
 
-    const citas_medico = await Cita.findAll({
-      where: {
-        no_empleado: no_empleado,
-      },
-      order: [["fecha_hora_inicio", "ASC"]],
-      attributes: ["id", "fecha_hora_inicio", "fecha_hora_final", "nss"],
-    });
+    const appointmentsInfo = await fetchAppointmentInfo(consultorio);
 
-    const nssPacientesUnicos = Array.from(
-      new Set(citas_medico.map(({ nss }) => nss))
+    const nssPatients = Array.from(
+      new Set(appointmentsInfo.map(({ nss }) => nss))
     );
 
-    const pacientes = await Paciente.findAll({
-      where: {
-        nss: nssPacientesUnicos,
-      },
-      attributes: ["nss"],
-      include: {
-        model: Usuario,
-        attributes: ["nombre", "ap_paterno", "ap_materno"],
-      },
-    });
+    const patientsInfo = await fetchPatientInfo(nssPatients);
 
-    const pacientesMap = {};
-    pacientes.forEach(
+    const patientsMap = {};
+    patientsInfo.forEach(
       ({ nss, Usuario: { nombre, ap_paterno, ap_materno } }) => {
-        pacientesMap[nss] = { nombre, ap_paterno, ap_materno };
+        patientsMap[nss] = { nombre, ap_paterno, ap_materno };
       }
     );
 
-    const citasFormateadas = citas_medico.map((cita) => {
-      const { id, fecha_hora_inicio, fecha_hora_final, nss } = cita;
-      const { nombre, ap_paterno, ap_materno } = pacientesMap[nss];
+    const appointmentsInfoPatient = appointmentsInfo.map((appointment) => {
+      const {
+        id,
+        nss,
+        id_horario,
+        HorariosConsultorio: { fecha_hora_inicio, fecha_hora_final },
+      } = appointment;
+      const { nombre, ap_paterno, ap_materno } = patientsMap[nss];
 
       return {
         id,
@@ -116,10 +133,11 @@ medicoController.showAppointment = async (req, res) => {
         paciente: nombre + " " + ap_paterno + " " + ap_materno,
         fecha_hora_inicio,
         fecha_hora_final,
+        id_horario,
       };
     });
 
-    return res.json(citasFormateadas);
+    return res.json(appointmentsInfoPatient);
   } catch (error) {
     console.log("Error al obtener citas:", error);
     return res.status(500).json({ message: "Error al obtener citas" });

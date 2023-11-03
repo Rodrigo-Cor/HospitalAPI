@@ -1,5 +1,6 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../utils/database.util");
+const HorarioConsultorio = require("./HorariosConsultorios");
 
 const Cita = sequelize.define(
   "Citas",
@@ -9,33 +10,26 @@ const Cita = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
-    fecha_hora_inicio: {
-      type: DataTypes.DATE,
-      allowNull: false,
-    },
-    fecha_hora_final: {
-      type: DataTypes.DATE,
-      allowNull: false,
-    },
-    nss: {
+    id_horario:{
       type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: "HorariosConsultorios",
+        key: "id",
+      },
+    },   
+    nss: {
+      type: DataTypes.STRING(11),
       allowNull: false,
       references: {
         model: "Paciente",
         key: "nss",
       },
     },
-    no_empleado: {
-      type: DataTypes.STRING(15),
-      allowNull: false,
-      references: {
-        model: "Medico",
-        key: "no_empleado",
-      },
-    },
     pagado: {
       type: DataTypes.INTEGER,
       allowNull: true,
+      defaultValue: 0,
       validate: {
         isIn: {
           args: [[0, 1]],
@@ -48,5 +42,11 @@ const Cita = sequelize.define(
     tableName: "Citas",
   }
 );
+
+Cita.hasOne(HorarioConsultorio, {
+  foreignKey: "id",
+  sourceKey: "id_horario",
+});
+
 
 module.exports = Cita;

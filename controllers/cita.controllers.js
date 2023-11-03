@@ -9,34 +9,100 @@ const sequelize = require("../utils/database.util");
 const { Sequelize } = require("sequelize");
 const citaController = {};
 
-citaController.getEspecialidades = async (req, res) => {
-  try {
-    let especialidades = await Medico.findAll({
-      attributes: [
-        [
-          Sequelize.fn("DISTINCT", Sequelize.col("especialidad")),
-          "especialidad",
-        ],
-      ],
-    });
+const fetchDoctorsWithConsultorios = async () =>
+  await Medico.findAll({
+    attributes: ["correo", "consultorio", "especialidad"],
+    order: [["consultorio", "ASC"]],
+    include: {
+      model: Consultorios,
+      attributes: ["consultorio"],
+      include: {
+        model: HorariosConsultorios,
+        where: { disponible: true },
+      },
+    },
+  });
 
-    especialidades = await Promise.all(
-      especialidades.map(async (especialidad) => {
-        const costo = await Servicio.findOne({
-          where: {
-            nombre: "Consulta " + especialidad.especialidad.toLowerCase(),
-          },
-          attributes: ["costo"],
-        });
-        especialidad.dataValues.costo = costo.dataValues.costo;
-        return especialidad;
+const fetchAvailableDoctors = async (medicos) => {
+  return (
+    await Promise.all(
+      medicos.map(async ({ correo, Consultorio }) => {
+        if (!Consultorio) return null;
+
+        const medico_usuario = await fetchDoctorDetails(correo);
+
+        if (medico_usuario) {
+          const {
+            no_empleado,
+            consultorio,
+            especialidad,
+            Usuario: { nombre, ap_paterno, ap_materno },
+          } = medico_usuario;
+          return {
+            no_empleado: no_empleado,
+            especialidad: especialidad,
+            costo: await fetchConsultaCost(especialidad),
+            nombreCompleto: nombre + " " + ap_paterno + " " + ap_materno,
+            consultorio: consultorio,
+          };
+        }
+        return null;
       })
-    );
+    )
+  ).filter((medico) => medico !== null);
+};
 
-    return res.json(especialidades);
+const fetchDoctorDetails = async (correo) =>
+  await Medico.findOne({
+    where: { correo },
+    attributes: ["no_empleado", "consultorio", "especialidad"],
+    include: {
+      model: Usuario,
+      attributes: ["nombre", "ap_paterno", "ap_materno"],
+    },
+  });
+
+const fetchConsultaCost = async (especialidad) => {
+  const servicio = await Servicio.findOne({
+    where: {
+      nombre: "Consulta " + especialidad.toLowerCase(),
+    },
+    attributes: ["costo"],
+  });
+  return servicio?.costo || 0;
+};
+
+const fetchDoctorInfo = async (medicos) =>
+  await Promise.all(
+    medicos.map(
+      ({ no_empleado, especialidad, costo, nombreCompleto, consultorio }) => {
+        return {
+          no_empleado: no_empleado,
+          especialidad: especialidad,
+          costo: costo,
+          nombreCompleto: nombreCompleto,
+          consultorio: consultorio,
+        };
+      }
+    )
+  );
+
+citaController.getDoctors = async (req, res) => {
+  try {
+    const medicos = await fetchDoctorsWithConsultorios();
+
+    if (!medicos.length) {
+      return res.json([]);
+    }
+
+    const medicosDisponibles = await fetchAvailableDoctors(medicos);
+
+    const doctoresInfo = await fetchDoctorInfo(medicosDisponibles);
+
+    return res.json(doctoresInfo);
   } catch (error) {
-    console.error("Error al obtener especialidades:", error);
-    return res.status(500).json({ message: "Error al obtener especialidades" });
+    console.error("Error al obtener doctores:", error);
+    return res.status(500).json({ message: "Error al obtener doctores" });
   }
 };
 
@@ -62,92 +128,18 @@ citaController.getAppointmentsDays = async (req, res) => {
   }
 };
 
-citaController.getDoctors = async (req, res) => {
-  try {
-    const medicos = await Medico.findAll({
-      attributes: ["correo", "consultorio", "especialidad"],
-      order: [["consultorio", "ASC"]],
-      include: [
-        {
-          model: Consultorios,
-          attributes: ["consultorio"],
-          include: {
-            model: HorariosConsultorios,
-            where: { disponible: true },
-          },
-        },
-      ],
-    });
-
-    console.log(medicos);
-
-    let medicosDisponibles = (
-      await Promise.all(
-        medicos.map(async (medico) => {
-          if (medico.Consultorio === null) return null;
-          const medico_usuario = await Medico.findOne({
-            where: {
-              correo: medico.correo,
-            },
-            attributes: ["no_empleado", "consultorio", "especialidad"],
-            include: {
-              model: Usuario,
-              attributes: ["nombre", "ap_paterno", "ap_materno"],
-            },
-          });
-
-          medico_usuario.dataValues.nombreCompleto = `${medico_usuario.Usuario.nombre} ${medico_usuario.Usuario.ap_paterno} ${medico_usuario.Usuario.ap_materno}`;
-
-          delete medico_usuario.dataValues.Usuario;
-          return {
-            ...medico_usuario.dataValues,
-          };
-        })
-      )
-    ).filter((medico) => medico !== null);
-
-    medicosDisponibles = await Promise.all(
-      medicosDisponibles.map(async (especialidad) => {
-        const costo = await Servicio.findOne({
-          where: {
-            nombre: "Consulta " + especialidad.especialidad.toLowerCase(),
-          },
-          attributes: ["costo"],
-        });
-        especialidad.costo = costo.dataValues.costo;
-        return especialidad;
-      })
-    );
-
-    return res.json(medicosDisponibles);
-  } catch (error) {
-    console.log(error);
-    console.log("Error al obtener doctores:", error);
-    return res.status(500).json({ message: "Error al obtener doctores" });
-  }
-};
-
 citaController.scheduleAppointment = async (req, res) => {
   const t = await sequelize.transaction();
   try {
-    const { fecha_hora_inicio, fecha_hora_final, nss, no_empleado } = req.body;
+    const { nss, id_horario } = req.body;
 
     await Cita.create(
       {
-        fecha_hora_inicio: fecha_hora_inicio,
-        fecha_hora_final: fecha_hora_final,
+        id_horario: id_horario,
         nss: nss,
-        no_empleado: no_empleado,
       },
       { transaction: t }
     );
-
-    const medico = await Medico.findOne({
-      where: {
-        no_empleado: no_empleado,
-      },
-      attributes: ["consultorio"],
-    });
 
     await HorarioConsultorio.update(
       {
@@ -155,9 +147,7 @@ citaController.scheduleAppointment = async (req, res) => {
       },
       {
         where: {
-          consultorio: medico.consultorio,
-          fecha_hora_inicio: fecha_hora_inicio,
-          fecha_hora_final: fecha_hora_final,
+          id: id_horario,
         },
       },
       { transaction: t }
@@ -170,6 +160,5 @@ citaController.scheduleAppointment = async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 };
-
 
 module.exports = citaController;

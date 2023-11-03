@@ -6,9 +6,8 @@ const Paciente = sequelize.define(
   "Pacientes",
   {
     nss: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.STRING(11),
       primaryKey: true,
-      len: [0, 11],
     },
     correo: {
       type: DataTypes.STRING(50),

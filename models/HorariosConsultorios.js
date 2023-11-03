@@ -1,6 +1,5 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../utils/database.util");
-const Consultorio = require("./Consultorios");
 const HorarioConsultorio = sequelize.define(
   "HorariosConsultorios",
   {
@@ -25,7 +24,6 @@ const HorarioConsultorio = sequelize.define(
       validate: {
         isIn: {
           args: [[0, 1]],
-          msg: 'El campo "disponible" debe ser 0 o 1.',
         },
       },
     },
