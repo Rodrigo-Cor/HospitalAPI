@@ -33,6 +33,15 @@ const Cita = sequelize.define(
         key: "no_empleado",
       },
     },
+    pagado: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      validate: {
+        isIn: {
+          args: [[0, 1]],
+        },
+      },
+    },
   },
   {
     timestamps: false,

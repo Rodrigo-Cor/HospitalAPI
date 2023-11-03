@@ -3,6 +3,7 @@ const Paciente = require("../models/Pacientes.js");
 const Usuario = require("../models/Usuarios.js");
 const Cita = require("../models/Citas.js");
 const Medico = require("../models/Medicos.js");
+const HorarioConsultorio = require("../models/HorariosConsultorios.js");
 
 const sequelize = require("../utils/database.util");
 
@@ -24,8 +25,9 @@ const formatDateTime = (date) => {
 
 const isOnTime = (date) => {
   const oneDayAgo = new Date();
-  date.setHours(date.getHours() - 24);
-  return new Date(date) > oneDayAgo;
+  const auxDate = new Date(date);
+  auxDate.setHours(auxDate.getHours() - 24);
+  return new Date(auxDate) > oneDayAgo;
 };
 
 pacienteController.register = async (req, res) => {
@@ -80,10 +82,20 @@ pacienteController.showAppointment = async (req, res) => {
       where: {
         nss: nss,
       },
+      order: [["fecha_hora_inicio", "ASC"]],
+      attributes: [
+        "id",
+        "fecha_hora_inicio",
+        "fecha_hora_final",
+        "no_empleado",
+        "pagado",
+      ],
     });
 
+    console.log(citas_paciente);
+
     const noEmpleadosUnicos = Array.from(
-      new Set(citas_paciente.map((cita) => cita.no_empleado))
+      new Set(citas_paciente.map(({ no_empleado }) => no_empleado))
     );
 
     const medicos = await Medico.findAll({
@@ -98,27 +110,78 @@ pacienteController.showAppointment = async (req, res) => {
     });
 
     const medicosMap = {};
-    medicos.forEach((medico) => {
-      medicosMap[medico.no_empleado] = medico;
-    });
+    medicos.forEach(
+      ({
+        no_empleado,
+        consultorio,
+        especialidad,
+        Usuario: { nombre, ap_paterno, ap_materno },
+      }) => {
+        medicosMap[no_empleado] = {
+          consultorio,
+          especialidad,
+          nombre,
+          ap_paterno,
+          ap_materno,
+        };
+      }
+    );
 
     const citasFormateadas = citas_paciente.map((cita) => {
-      const { id, fecha_hora_inicio, fecha_hora_final, no_empleado } = cita;
+      const { id, fecha_hora_inicio, fecha_hora_final, no_empleado, pagado } =
+        cita;
 
-      const medico = medicosMap[no_empleado];
-      const { nombre, ap_paterno, ap_materno } = medico.Usuario;
+      console.log(cita);
 
+      const { consultorio, especialidad, nombre, ap_paterno, ap_materno } =
+        medicosMap[no_empleado];
       return {
         id,
         medico: nombre + " " + ap_paterno + " " + ap_materno,
-        fecha_hora_inicio: fecha_hora_inicio,
-        fecha_hora_final: fecha_hora_final,
+        consultorio,
+        especialidad,
+        fecha_hora_inicio,
+        fecha_hora_final,
         onTime: isOnTime(fecha_hora_inicio),
+        pagado,
       };
     });
 
     return res.json(citasFormateadas);
   } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+pacienteController.deleteAppointment = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const { id, consultorio, fecha_hora_inicio, fecha_hora_final } = req.body;
+    console.log(id, consultorio, fecha_hora_inicio, fecha_hora_final);
+    await Cita.destroy({
+      where: {
+        id,
+      },
+      transaction: t,
+    });
+
+    await HorarioConsultorio.update(
+      {
+        disponible: 1,
+      },
+      {
+        where: {
+          consultorio: consultorio,
+          fecha_hora_inicio: fecha_hora_inicio,
+          fecha_hora_final: fecha_hora_final,
+        },
+      },
+      { transaction: t }
+    );
+    await t.commit();
+    return res.json({ message: "Se ha cancelado su cita" });
+  } catch (error) {
+    await t.rollback();
     return res.status(500).json({ message: error.message });
   }
 };

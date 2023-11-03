@@ -55,15 +55,24 @@ recepcionistaController.register = async (req, res) => {
 recepcionistaController.setSchedule = async (req, res) => {
   try {
     const { consultorio, fecha_hora_inicio, fecha_hora_final } = req.body;
-    //console.log(new Date(hora_inicio).toUTCString());
-    //console.log(new Date("2023-10-21" + "T" + "05:00").toUTCString());
-    //const event = new Date("05 October 2011 14:48 UTC");
-    //console.log(event.toISOString());
+    console.log(fecha_hora_inicio);
+    console.log(fecha_hora_final);
+
     await HorarioConsultorio.create({
       consultorio: consultorio,
-      fecha_hora_inicio: new Date(fecha_hora_inicio).toISOString(),
-      fecha_hora_final: new Date(fecha_hora_final).toISOString(),
+      fecha_hora_inicio: fecha_hora_inicio,
+      fecha_hora_final: fecha_hora_final,
     });
+
+    /*
+    const horariosConsultorio = await HorarioConsultorio.findAll({
+      where: {
+        fecha_hora_inicio: fecha_hora_inicio,
+        fecha_hora_final: fecha_hora_final,
+      },
+    });
+    return res.json(horariosConsultorio);
+    */
 
     return res
       .status(201)

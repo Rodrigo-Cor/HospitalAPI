@@ -171,4 +171,5 @@ citaController.scheduleAppointment = async (req, res) => {
   }
 };
 
+
 module.exports = citaController;
