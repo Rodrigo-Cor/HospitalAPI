@@ -14,9 +14,7 @@ const Consultorio = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
       validate: {
-        isIn: {
-          args: [[0, 1]],
-        },
+        isIn: [[0, 1]],
       },
     },
   },

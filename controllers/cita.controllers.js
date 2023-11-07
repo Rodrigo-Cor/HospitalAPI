@@ -5,8 +5,10 @@ const Usuario = require("../models/Usuarios.js");
 const Servicio = require("../models/Servicios.js");
 const HorariosConsultorios = require("../models/HorariosConsultorios.js");
 const Consultorios = require("../models/Consultorios.js");
+
 const sequelize = require("../utils/database.util");
 const { Sequelize } = require("sequelize");
+
 const citaController = {};
 
 const fetchDoctorsWithConsultorios = async () =>
@@ -109,12 +111,18 @@ citaController.getDoctors = async (req, res) => {
 citaController.getAppointmentsDays = async (req, res) => {
   try {
     const { consultorio } = req.body;
+    
+    const today = new Date();
+    const hoursToday = today.getUTCHours();
+    const date48HoursAfter = new Date(today);
+    date48HoursAfter.setUTCHours(hoursToday + 48);
+    
     const citas_disponibles = await HorarioConsultorio.findAll({
       where: {
         disponible: 1,
         consultorio: consultorio,
         fecha_hora_inicio: {
-          [Sequelize.Op.gte]: new Date().setHours(new Date().getHours() + 48),
+          [Sequelize.Op.gte]: date48HoursAfter,
         },
       },
       order: [["fecha_hora_inicio", "ASC"]],
@@ -137,6 +145,7 @@ citaController.scheduleAppointment = async (req, res) => {
       {
         id_horario: id_horario,
         nss: nss,
+        status: 1,
       },
       { transaction: t }
     );

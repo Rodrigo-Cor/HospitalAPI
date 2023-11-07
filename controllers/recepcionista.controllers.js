@@ -55,28 +55,30 @@ recepcionistaController.register = async (req, res) => {
 recepcionistaController.setSchedule = async (req, res) => {
   try {
     const { consultorio, fecha_hora_inicio, fecha_hora_final } = req.body;
-    console.log(fecha_hora_inicio);
-    console.log(fecha_hora_final);
 
-    await HorarioConsultorio.create({
-      consultorio: consultorio,
-      fecha_hora_inicio: fecha_hora_inicio,
-      fecha_hora_final: fecha_hora_final,
-    });
-
-    /*
-    const horariosConsultorio = await HorarioConsultorio.findAll({
+    const horarioExistente = await HorarioConsultorio.findOne({
       where: {
+        consultorio: consultorio,
         fecha_hora_inicio: fecha_hora_inicio,
         fecha_hora_final: fecha_hora_final,
       },
     });
-    return res.json(horariosConsultorio);
-    */
 
-    return res
-      .status(201)
-      .json({ message: "Horario del consultorio registrado" });
+    if (!horarioExistente) {
+      await HorarioConsultorio.create({
+        consultorio: consultorio,
+        fecha_hora_inicio: fecha_hora_inicio,
+        fecha_hora_final: fecha_hora_final,
+      });
+
+      return res
+        .status(201)
+        .json({ message: "Horario del consultorio registrado." });
+    } else {
+      return res
+        .status(404)
+        .json({ message: "El horario ya está registrado." });
+    }
   } catch (error) {
     console.log(error);
     return res.status(500).json({ message: error.message });

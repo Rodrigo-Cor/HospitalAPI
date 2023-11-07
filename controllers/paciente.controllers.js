@@ -1,4 +1,5 @@
 const crypto = require("crypto-js");
+
 const Paciente = require("../models/Pacientes.js");
 const Usuario = require("../models/Usuarios.js");
 const Cita = require("../models/Citas.js");
@@ -79,7 +80,7 @@ const fetchAppointmentsPatients = async (nss) => {
     where: {
       nss: nss,
     },
-    attributes: ["id", "id_horario", "pagado"],
+    attributes: ["id", "id_horario", "status"],
     include: {
       model: HorarioConsultorio,
       attributes: ["fecha_hora_inicio", "fecha_hora_final", "consultorio"],
@@ -138,7 +139,7 @@ pacienteController.showAppointment = async (req, res) => {
       const {
         id,
         id_horario,
-        pagado,
+        status,
         HorariosConsultorio: {
           consultorio,
           fecha_hora_inicio,
@@ -157,7 +158,7 @@ pacienteController.showAppointment = async (req, res) => {
         fecha_hora_inicio,
         fecha_hora_final,
         onTime: isOnTime(fecha_hora_inicio),
-        pagado,
+        status,
       };
     });
 
@@ -171,12 +172,17 @@ pacienteController.deleteAppointment = async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const { id, id_horario } = req.body;
-    await Cita.destroy({
-      where: {
-        id: id,
+    await Cita.update(
+      {
+        status: 2,
       },
-      transaction: t,
-    });
+      {
+        where: {
+          id: id,
+        },
+      },
+      { transaction: t }
+    );
 
     await HorarioConsultorio.update(
       {
