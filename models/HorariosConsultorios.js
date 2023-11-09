@@ -42,5 +42,4 @@ const HorarioConsultorio = sequelize.define(
   }
 );
 
-
 module.exports = HorarioConsultorio;

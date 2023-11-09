@@ -5,6 +5,7 @@ const Usuario = require("../models/Usuarios.js");
 const Cita = require("../models/Citas.js");
 const Medico = require("../models/Medicos.js");
 const HorarioConsultorio = require("../models/HorariosConsultorios.js");
+const Consultorio = require("../models/Consultorios.js");
 
 const sequelize = require("../utils/database.util");
 
@@ -18,17 +19,28 @@ const hashPassword = (password) => {
   }
 };
 
-const formatDateTime = (date) => {
-  return new Date(date).toLocaleString("es-MX", {
-    timeZone: "America/Mexico_City",
-  });
-};
-
 const isOnTime = (date) => {
   const oneDayAgo = new Date();
   const auxDate = new Date(date);
   auxDate.setHours(auxDate.getHours() - 24);
   return new Date(auxDate) > oneDayAgo;
+};
+
+const fetchAppointmentsPatients = async (nss) => {
+  return await Cita.findAll({
+    where: {
+      nss: nss,
+    },
+    attributes: ["id", "id_horario", "status"],
+    include: {
+      model: HorarioConsultorio,
+      attributes: ["fecha_hora_inicio", "fecha_hora_final", "consultorio"],
+    },
+    order: [
+      [HorarioConsultorio, "fecha_hora_inicio", "ASC"],
+      [[HorarioConsultorio, "consultorio", "ASC"]],
+    ],
+  });
 };
 
 pacienteController.register = async (req, res) => {
@@ -75,92 +87,76 @@ pacienteController.register = async (req, res) => {
   }
 };
 
-const fetchAppointmentsPatients = async (nss) => {
-  return await Cita.findAll({
+const fetchAppointmentsPatient = async (nss) =>
+  await Cita.findAll({
+    attributes: ["id", "id_horario", "status"],
     where: {
       nss: nss,
     },
-    attributes: ["id", "id_horario", "status"],
     include: {
       model: HorarioConsultorio,
-      attributes: ["fecha_hora_inicio", "fecha_hora_final", "consultorio"],
-      order: [["fecha_hora_inicio", "ASC"]],
+      attributes: ["consultorio", "fecha_hora_inicio", "fecha_hora_final"],
+      include: {
+        model: Consultorio,
+        attributes: {
+          exclude: ["disponible"],
+        },
+        include: {
+          model: Medico,
+          attributes: ["especialidad"],
+          include: {
+            model: Usuario,
+            attributes: ["nombre", "ap_paterno", "ap_materno"],
+          },
+        },
+      },
     },
+    order: [
+      [HorarioConsultorio, "fecha_hora_inicio", "ASC"],
+      [HorarioConsultorio, Consultorio, "consultorio", "ASC"],
+    ],
   });
-};
-
-const fetchDoctorsWithConsultorios = async (consultoriosUnicos) => {
-  return await Medico.findAll({
-    where: {
-      consultorio: consultoriosUnicos,
-    },
-    attributes: ["especialidad", "consultorio"],
-    include: {
-      model: Usuario,
-      attributes: ["nombre", "ap_paterno", "ap_materno"],
-    },
-  });
-};
 
 pacienteController.showAppointment = async (req, res) => {
   try {
     const { nss } = req.body;
 
-    const appointmentsPatient = await fetchAppointmentsPatients(nss);
+    const appointmentsPatient = await fetchAppointmentsPatient(nss);
 
-    const consultoriosUnicos = Array.from(
-      new Set(
-        appointmentsPatient.map(
-          ({ HorariosConsultorio: { consultorio } }) => consultorio
-        )
-      )
-    );
-
-    const doctorsInfo = await fetchDoctorsWithConsultorios(consultoriosUnicos);
-
-    const medicosMap = {};
-    doctorsInfo.forEach(
+    const appointmentsInfoPatient = appointmentsPatient.map(
       ({
-        consultorio,
-        especialidad,
-        Usuario: { nombre, ap_paterno, ap_materno },
-      }) => {
-        medicosMap[consultorio] = {
-          consultorio,
-          especialidad,
-          nombre,
-          ap_paterno,
-          ap_materno,
-        };
-      }
-    );
-
-    const appointmentsInfoPatient = appointmentsPatient.map((appointment) => {
-      const {
         id,
         id_horario,
         status,
         HorariosConsultorio: {
-          consultorio,
           fecha_hora_inicio,
           fecha_hora_final,
+          Consultorio: {
+            consultorio: consultorio,
+            Medico: {
+              especialidad: especialidad,
+              Usuario: {
+                nombre: nombre,
+                ap_paterno: ap_paterno,
+                ap_materno: ap_materno,
+              },
+            },
+          },
         },
-      } = appointment;
-
-      const { especialidad, nombre, ap_paterno, ap_materno } =
-        medicosMap[consultorio];
-      return {
-        id,
-        id_horario,
-        medico: nombre + " " + ap_paterno + " " + ap_materno,
-        consultorio,
-        especialidad,
-        fecha_hora_inicio,
-        fecha_hora_final,
-        onTime: isOnTime(fecha_hora_inicio),
-        status,
-      };
-    });
+      }) => {
+        return {
+          id,
+          id_horario,
+          medico: nombre + " " + ap_paterno + " " + ap_materno,
+          consultorio,
+          especialidad,
+          fecha_hora_inicio,
+          fecha_hora_final,
+          onTime: isOnTime(fecha_hora_inicio),
+          status,
+        };
+      }
+    );
 
     return res.json(appointmentsInfoPatient);
   } catch (error) {
@@ -172,6 +168,7 @@ pacienteController.deleteAppointment = async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const { id, id_horario } = req.body;
+
     await Cita.update(
       {
         status: 2,

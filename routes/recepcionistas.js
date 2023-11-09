@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 
-const recepionista = require('../controllers/recepcionista.controllers');
+const recepcionista = require('../controllers/recepcionista.controllers');
 
-router.post('/register', recepionista.register);
-router.post("/setSchedule", recepionista.setSchedule);
-router.post("/getPatientsPaid", recepionista.getPatientsPaid);
+router.post('/register', recepcionista.register);
+router.post("/setSchedule", recepcionista.setSchedule);
+router.post("/getPatientsPaid", recepcionista.getPatientsPaid);
+router.get("/getConsultorios", recepcionista.getConsultorios);
 
 
 module.exports = router;

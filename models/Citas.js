@@ -2,6 +2,7 @@ const { DataTypes } = require("sequelize");
 const sequelize = require("../utils/database.util");
 const Status = require("./Status");
 const HorarioConsultorio = require("./HorariosConsultorios");
+const Paciente = require("./Pacientes");
 
 const Cita = sequelize.define(
   "Citas",
@@ -42,6 +43,12 @@ const Cita = sequelize.define(
   }
 );
 
+Paciente.hasMany(Cita, {
+  foreignKey: "nss",
+  sourceKey: "nss",
+  targetKey: "nss",
+});
+
 Cita.hasOne(HorarioConsultorio, {
   foreignKey: "id",
   sourceKey: "id_horario",
@@ -50,6 +57,12 @@ Cita.hasOne(HorarioConsultorio, {
 Cita.hasOne(Status, {
   foreignKey: "id",
   sourceKey: "status",
+});
+
+Cita.belongsTo(Paciente, {
+  foreignKey: "nss",
+  sourceKey: "nss",
+  targetKey: "nss",
 });
 
 module.exports = Cita;

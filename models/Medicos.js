@@ -1,16 +1,15 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../utils/database.util");
-const Usuario = require("./Usuarios");
-const Consultorio = require("./Consultorios");
+
 const Medico = sequelize.define(
   "Medicos",
   {
     no_empleado: {
-      type: DataTypes.STRING(15),
+      type: DataTypes.STRING,
       primaryKey: true,
     },
     correo: {
-      type: DataTypes.STRING(50),
+      type: DataTypes.STRING,
       allowNull: false,
       references: {
         model: "Usuarios",
@@ -18,7 +17,7 @@ const Medico = sequelize.define(
       },
     },
     especialidad: {
-      type: DataTypes.STRING(50),
+      type: DataTypes.STRING,
       allowNull: false,
       references: {
         model: "Especialidad",
@@ -27,7 +26,6 @@ const Medico = sequelize.define(
     },
     consultorio: {
       type: DataTypes.INTEGER,
-      len: [0, 10],
       allowNull: false,
       references: {
         model: "Consultorio",
@@ -35,7 +33,7 @@ const Medico = sequelize.define(
       },
     },
     telefono: {
-      type: DataTypes.STRING(10),
+      type: DataTypes.STRING,
       allowNull: false,
     },
   },
@@ -44,16 +42,6 @@ const Medico = sequelize.define(
     tableName: "Medicos",
   }
 );
-
-Medico.hasOne(Usuario, {
-  foreignKey: "correo",
-  sourceKey: "correo",
-});
-
-Medico.hasOne(Consultorio, {
-  foreignKey: "consultorio",
-  sourceKey: "consultorio",
-});
 
 
 module.exports = Medico;

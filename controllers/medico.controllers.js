@@ -75,29 +75,30 @@ medicoController.register = async (req, res) => {
 
 const fetchAppointmentInfo = async (consultorio) =>
   await Cita.findAll({
-    attributes: ["nss", "id_horario", "id"],
-    include: {
-      model: HorarioConsultorio,
-      where: {
-        consultorio: consultorio,
-        disponible: false,
+    attributes: ["nss", "id_horario", "id", "status"],
+    include: [
+      {
+        model: HorarioConsultorio,
+        where: {
+          consultorio: consultorio,
+          disponible: false,
+        },
+        attributes: ["fecha_hora_inicio", "fecha_hora_final"],
       },
-      attributes: ["fecha_hora_inicio", "fecha_hora_final"],
-      order: [["fecha_hora_inicio", "ASC"]],
-    },
+      {
+        model: Paciente,
+        attributes: {
+          exclude: ["nss", "metodo_pago", "telefono"],
+        },
+        include: {
+          model: Usuario,
+          attributes: ["nombre", "ap_paterno", "ap_materno"],
+        },
+      },
+    ],
+    order: [[HorarioConsultorio, "consultorio", "ASC"]],
   });
 
-const fetchPatientInfo = async (nssPatients) =>
-  await Paciente.findAll({
-    where: {
-      nss: nssPatients,
-    },
-    attributes: ["nss"],
-    include: {
-      model: Usuario,
-      attributes: ["nombre", "ap_paterno", "ap_materno"],
-    },
-  });
 
 medicoController.showAppointment = async (req, res) => {
   try {
@@ -105,37 +106,29 @@ medicoController.showAppointment = async (req, res) => {
 
     const appointmentsInfo = await fetchAppointmentInfo(consultorio);
 
-    const nssPatients = Array.from(
-      new Set(appointmentsInfo.map(({ nss }) => nss))
-    );
-
-    const patientsInfo = await fetchPatientInfo(nssPatients);
-
-    const patientsMap = {};
-    patientsInfo.forEach(
-      ({ nss, Usuario: { nombre, ap_paterno, ap_materno } }) => {
-        patientsMap[nss] = { nombre, ap_paterno, ap_materno };
+    const appointmentsInfoPatient = appointmentsInfo.map(
+      ({
+        nss,
+        id,
+        id_horario,
+        status,
+        HorariosConsultorio: { fecha_hora_inicio, fecha_hora_final },
+        Paciente: {
+          Usuario: { nombre, ap_paterno, ap_materno },
+        },
+      }) => {
+        const paciente = nombre + " " + ap_paterno + " " + ap_materno;
+        return {
+          id,
+          nss,
+          paciente: paciente,
+          fecha_hora_inicio,
+          fecha_hora_final,
+          id_horario,
+          status,
+        };
       }
     );
-
-    const appointmentsInfoPatient = appointmentsInfo.map((appointment) => {
-      const {
-        id,
-        nss,
-        id_horario,
-        HorariosConsultorio: { fecha_hora_inicio, fecha_hora_final },
-      } = appointment;
-      const { nombre, ap_paterno, ap_materno } = patientsMap[nss];
-
-      return {
-        id,
-        nss,
-        paciente: nombre + " " + ap_paterno + " " + ap_materno,
-        fecha_hora_inicio,
-        fecha_hora_final,
-        id_horario,
-      };
-    });
 
     return res.json(appointmentsInfoPatient);
   } catch (error) {

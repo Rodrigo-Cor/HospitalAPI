@@ -1,5 +1,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../utils/database.util");
+const Medico = require("./Medicos.js");
+const Paciente = require("./Pacientes.js");
 
 const Usuario = sequelize.define(
   "Usuarios",
@@ -38,5 +40,29 @@ const Usuario = sequelize.define(
     tableName: "Usuarios",
   }
 );
+
+Medico.hasOne(Usuario, {
+  foreignKey: "correo",
+  sourceKey: "correo",
+  targetKey: "correo",
+});
+
+Paciente.hasOne(Usuario, {
+  foreignKey: "correo",
+  sourceKey: "correo",
+  targetKey: "correo",
+});
+
+Usuario.belongsTo(Medico, {
+  foreignKey: "correo",
+  sourceKey: "correo",
+  targetKey: "correo",
+});
+
+Usuario.belongsTo(Paciente, {
+  foreignKey: "correo",
+  sourceKey: "correo",
+  targetKey: "correo",
+});
 
 module.exports = Usuario;

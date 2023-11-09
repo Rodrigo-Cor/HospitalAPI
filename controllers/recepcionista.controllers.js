@@ -1,11 +1,13 @@
 const crypto = require("crypto-js");
 
 const HorarioConsultorio = require("../models/HorariosConsultorios.js");
+const Consultorio = require("../models/Consultorios.js");
 const Recepcionista = require("../models/Recepcionistas.js");
 const Usuario = require("../models/Usuarios.js");
 const Cita = require("../models/Citas.js");
 
 const sequelize = require("../utils/database.util");
+const { Sequelize } = require("sequelize");
 
 const recepcionistaController = {};
 
@@ -14,6 +16,19 @@ const hashPassword = (password) => {
     return crypto.SHA256(password).toString();
   } catch (error) {
     console.log(error);
+  }
+};
+
+recepcionistaController.getConsultorios = async (req, res) => {
+  try {
+    const consultorios = await Consultorio.findAll({
+      attributes: ["consultorio"],
+    });
+
+    return res.status(200).json(consultorios);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -71,13 +86,10 @@ recepcionistaController.setSchedule = async (req, res) => {
         fecha_hora_final: fecha_hora_final,
       });
 
-      return res
-        .status(201)
-        .json({ message: "Horario del consultorio registrado." });
+      return res.status(201)
+  
     } else {
-      return res
-        .status(404)
-        .json({ message: "El horario ya está registrado." });
+      return res.status(400)    
     }
   } catch (error) {
     console.log(error);
