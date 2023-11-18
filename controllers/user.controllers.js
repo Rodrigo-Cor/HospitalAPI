@@ -16,29 +16,6 @@ const hashPassword = (password) => {
   }
 };
 
-userController.obtenerUsuarios = async (req, res) => {
-  try {
-    const usuarios = await Usuario.findAll();
-    return res.json(usuarios);
-  } catch (error) {
-    console.error("Error al obtener usuarios:", error);
-    return res.status(500).json({ message: "Error al obtener usuarios" });
-  }
-};
-
-userController.verifyUser = async (req, res) => {
-  const { nombre } = req.body;
-  try {
-    const Usuario = await Usuario.findOne({ where: { nombre: nombre } });
-    if (Usuario)
-      return res.status(400).json({ message: "El usuario ya existe" });
-
-    return res.json({ message: "Usuario disponible" });
-  } catch (error) {
-    return res.status(500).json({ message: "Error en el servidor" });
-  }
-};
-
 userController.getConnection = async (req, res) => {
   try {
     console.log(process.env.HOST);
@@ -55,11 +32,10 @@ userController.getConnection = async (req, res) => {
 
 userController.loginUser = async (req, res) => {
   const { correo, password, typeUser } = req.body;
-  console.log(req.body);
   try {
     const user = await Usuario.findOne({
       where: { correo: correo },
-      attributes: ["nombre", "ap_paterno", "ap_materno", "password"],
+      attributes: ["nombre", "ap_paterno", "ap_materno", "password", "fecha_fin"],
     });
 
     if (!user) {
@@ -70,6 +46,8 @@ userController.loginUser = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ message: "Contraseña incorrecta" });
     }
+
+  //Falta implementar la validación de la fecha. En el proximo commit lo hago    
 
     if (typeUser === "patient") {
       const dataUser = await Paciente.findOne({

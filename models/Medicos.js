@@ -1,5 +1,6 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../utils/database.util");
+const Usuario = require("./Usuarios");
 
 const Medico = sequelize.define(
   "Medicos",
@@ -43,5 +44,10 @@ const Medico = sequelize.define(
   }
 );
 
+Medico.hasOne(Usuario, {
+  foreignKey: "correo",
+  sourceKey: "correo",
+  targetKey: "correo",
+});
 
 module.exports = Medico;

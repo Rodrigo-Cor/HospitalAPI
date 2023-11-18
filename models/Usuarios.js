@@ -1,7 +1,6 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../utils/database.util");
-const Medico = require("./Medicos.js");
-const Paciente = require("./Pacientes.js");
+const TipoUsuario = require("./TipoUsuarios");
 
 const Usuario = sequelize.define(
   "Usuarios",
@@ -31,8 +30,12 @@ const Usuario = sequelize.define(
       allowNull: false,
     },
     password: {
-      type: DataTypes.STRING(256),
+      type: DataTypes.STRING(32),
       allowNull: false,
+    },
+    fecha_fin: {
+      type: DataTypes.DATE,
+      allowNull: true,
     },
   },
   {
@@ -41,28 +44,10 @@ const Usuario = sequelize.define(
   }
 );
 
-Medico.hasOne(Usuario, {
-  foreignKey: "correo",
-  sourceKey: "correo",
-  targetKey: "correo",
-});
-
-Paciente.hasOne(Usuario, {
-  foreignKey: "correo",
-  sourceKey: "correo",
-  targetKey: "correo",
-});
-
-Usuario.belongsTo(Medico, {
-  foreignKey: "correo",
-  sourceKey: "correo",
-  targetKey: "correo",
-});
-
-Usuario.belongsTo(Paciente, {
-  foreignKey: "correo",
-  sourceKey: "correo",
-  targetKey: "correo",
+Usuario.hasOne(TipoUsuario, {
+  foreignKey: "tipo_usuario",
+  sourceKey: "tipo_usuario",
+  targetKey: "tipo_usuario",
 });
 
 module.exports = Usuario;

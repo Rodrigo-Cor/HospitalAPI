@@ -1,5 +1,6 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../utils/database.util");
+const Cita = require("./Citas");
 const HorarioConsultorio = sequelize.define(
   "HorariosConsultorios",
   {
@@ -41,5 +42,17 @@ const HorarioConsultorio = sequelize.define(
     tableName: "HorariosConsultorios",
   }
 );
+
+Cita.hasOne(HorarioConsultorio, {
+  foreignKey: "id", //FK de la tabla que tiene PK
+  sourceKey: "id_horario", //FK de la tabla que tiene FK
+  targetKey: "id_horario",  //PK de la tabla que tiene FK
+});
+
+HorarioConsultorio.belongsTo(Cita, {
+  foreignKey: "id", // PK de la tabla que hereda la PK
+  sourceKey: "id", // PK de la tabla que hereda la PK
+  targetKey: "id_horario", //PK de la tabla que tiene FK
+});
 
 module.exports = HorarioConsultorio;

@@ -6,6 +6,7 @@ const Cita = require("../models/Citas.js");
 const Medico = require("../models/Medicos.js");
 const HorarioConsultorio = require("../models/HorariosConsultorios.js");
 const Consultorio = require("../models/Consultorios.js");
+const { isOnTime } = require("../utils/appointment.util.js");
 
 const sequelize = require("../utils/database.util");
 
@@ -17,30 +18,6 @@ const hashPassword = (password) => {
   } catch (error) {
     console.log(error);
   }
-};
-
-const isOnTime = (date) => {
-  const oneDayAgo = new Date();
-  const auxDate = new Date(date);
-  auxDate.setHours(auxDate.getHours() - 24);
-  return new Date(auxDate) > oneDayAgo;
-};
-
-const fetchAppointmentsPatients = async (nss) => {
-  return await Cita.findAll({
-    where: {
-      nss: nss,
-    },
-    attributes: ["id", "id_horario", "status"],
-    include: {
-      model: HorarioConsultorio,
-      attributes: ["fecha_hora_inicio", "fecha_hora_final", "consultorio"],
-    },
-    order: [
-      [HorarioConsultorio, "fecha_hora_inicio", "ASC"],
-      [[HorarioConsultorio, "consultorio", "ASC"]],
-    ],
-  });
 };
 
 pacienteController.register = async (req, res) => {

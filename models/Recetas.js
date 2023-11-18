@@ -26,14 +26,14 @@ const Receta = sequelize.define(
 );
 
 Cita.hasOne(Receta, {
-  foreignKey: "id_cita",
-  sourceKey: "id",
+  foreignKey: "id",
+  sourceKey: "id_cita",
   targetKey: "id_cita",
 });
 
 Receta.hasOne(Cita, {
   foreignKey: "id",
-  sourceKey: "id_cita",
+  sourceKey: "id",
   targetKey: "id_cita",
 });
 

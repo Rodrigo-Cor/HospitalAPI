@@ -1,12 +1,13 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
-const recepcionista = require('../controllers/recepcionista.controllers');
+const recepcionista = require("../controllers/recepcionista.controllers");
 
-router.post('/register', recepcionista.register);
+router.post("/register", recepcionista.register);
 router.post("/setSchedule", recepcionista.setSchedule);
-router.post("/getPatientsPaid", recepcionista.getPatientsPaid);
-router.get("/getConsultorios", recepcionista.getConsultorios);
-
+router.get("/fetchAppointmentsToday", recepcionista.getAppointmentsToday);
+router.get("/listConsultorios", recepcionista.getConsultorios);
+router.post("/fetchScheduledAppointments", recepcionista.getScheduledAppointments);
+router.delete("/deletePatient", recepcionista.deletePatient);
 
 module.exports = router;

@@ -1,11 +1,14 @@
+"use strict";
+
 const HorarioConsultorio = require("../models/HorariosConsultorios.js");
 const Cita = require("../models/Citas.js");
 const Medico = require("../models/Medicos.js");
 const Usuario = require("../models/Usuarios.js");
-const Servicio = require("../models/Servicios.js");
 const Consultorio = require("../models/Consultorios.js");
 
 const sequelize = require("../utils/database.util");
+const { fetchConsultaCost } = require("../utils/appointment.util.js");
+
 const { Sequelize } = require("sequelize");
 
 const citaController = {};
@@ -17,29 +20,13 @@ const fetchUniqueConsultorios = async () =>
     ],
   });
 
-const fetchConsultaCost = async (especialidad) => {
-  const servicio = await Servicio.findOne({
-    where: {
-      nombre: "Consulta " + especialidad.toLowerCase(),
-    },
-    attributes: ["costo"],
-  });
-  return servicio?.costo || 0;
-};
-
 const fetchDoctorsWithConsultorios = async () => {
-  const uniqueConsultorios = await fetchUniqueConsultorios();
-
-  console.log(uniqueConsultorios);
-
   return await Medico.findAll({
     attributes: ["no_empleado", "especialidad"],
-    order: [["consultorio", "ASC"]],
-    where: {
-      consultorio: {
-        [Sequelize.Op.in]: uniqueConsultorios.map((row) => row.consultorio),
-      },
-    },
+    order: [
+      ["especialidad", "ASC"],
+      ["consultorio", "ASC"],
+    ],
     include: [
       {
         model: Consultorio,
@@ -66,7 +53,6 @@ const fetchDoctorsWithConsultorios = async () => {
         attributes: ["nombre", "ap_paterno", "ap_materno"],
       },
     ],
-    distinct: true,
   });
 };
 
@@ -78,8 +64,22 @@ citaController.getDoctors = async (req, res) => {
       return res.json([]);
     }
 
+    const doctorsUnique = doctorsWithConsultorios.reduce(
+      (accumulator, currentValue) => {
+        if (
+          !accumulator.some(
+            ({ no_empleado }) => no_empleado === currentValue.no_empleado
+          )
+        ) {
+          accumulator.push(currentValue);
+        }
+        return accumulator;
+      },
+      []
+    );
+
     const availableDoctors = await Promise.all(
-      doctorsWithConsultorios.map(
+      doctorsUnique.map(
         async ({
           no_empleado,
           especialidad,
@@ -87,7 +87,6 @@ citaController.getDoctors = async (req, res) => {
           Usuario: { nombre, ap_paterno, ap_materno },
         }) => {
           const nombreCompleto = nombre + " " + ap_paterno + " " + ap_materno;
-
           return {
             no_empleado: no_empleado,
             especialidad: especialidad,
