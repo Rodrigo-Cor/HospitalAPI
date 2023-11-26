@@ -34,6 +34,8 @@ pacienteController.register = async (req, res) => {
       metodo_pago,
     } = req.body;
 
+    console.log(hashPassword(password).length);
+
     await Usuario.create(
       {
         correo: correo,

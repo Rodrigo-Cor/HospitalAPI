@@ -94,7 +94,7 @@ recepcionistaController.deletePatient = async (req, res) => {
     const { nss } = req.body;
     const { correo, citas } = await fetchEmailAndSchedules(nss);
     const idHorarios = citas.map(({ id_horario }) => id_horario);
-    
+
     await HorarioConsultorio.update(
       {
         disponible: 1,
@@ -107,10 +107,7 @@ recepcionistaController.deletePatient = async (req, res) => {
       { transaction: t }
     );
 
-    await Cita.update(
-      {
-        status: 2,
-      },
+    await Cita.destroy(
       {
         where: {
           nss: nss,
@@ -133,6 +130,108 @@ recepcionistaController.deletePatient = async (req, res) => {
 
     await t.commit();
     return res.json({ message: "Paciente dado de baja del sistema" });
+  } catch (error) {
+    console.log(error);
+    await t.rollback();
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+const fetchEmailAndAppointments = async (no_empleado) => {
+  const citas = await Medico.findByPk(no_empleado, {
+    attributes: {
+      exclude: ["no_empleado", "especialidad", "telefono"],
+    },
+    include: {
+      model: Consultorio,
+      attributes: {
+        exclude: ["disponible", "id"],
+      },
+      include: {
+        model: HorarioConsultorio,
+        attributes: {
+          exclude: [
+            "consultorio",
+            "disponible",
+            "fecha_hora_inicio",
+            "fecha_hora_final",
+          ],
+        },
+        include: {
+          model: Cita,
+          attributes: {
+            exclude: ["status", "nss", "id_horario"],
+          },
+          where: {
+            status: 1,
+          },
+        },
+      },
+    },
+  });
+
+  return { citas };
+};
+
+recepcionistaController.deleteDoctor = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const { no_empleado } = req.body;
+    const {
+      citas: {
+        correo,
+        consultorio,
+        Consultorio: { HorariosConsultorios },
+      },
+    } = await fetchEmailAndAppointments(no_empleado);
+
+    const idHorarios = HorariosConsultorios.map(({ id }) => id);
+    const idCitas = HorariosConsultorios.map((citas) => citas.Cita["id"]);
+
+    await Cita.destroy({
+      where: {
+        id: idCitas,
+      },
+      individualHooks: true,
+      transaction: t,
+    });
+
+    await HorarioConsultorio.destroy({
+      where: {
+        id: idHorarios,
+      },
+      individualHooks: true,
+      transaction: t,
+    });
+
+    await Consultorio.update(
+      {
+        disponible: 1,
+      },
+      {
+        where: {
+          consultorio: consultorio,
+        },
+        individualHooks: true,
+      },
+      { transaction: t }
+    );
+
+    await Usuario.update(
+      {
+        fecha_fin: new Date(),
+      },
+      {
+        where: {
+          correo: correo,
+        },
+        individualHooks: true,
+      },
+      { transaction: t }
+    );
+
+    await t.commit();
+    return res.json({ message: "Médico dado de baja del sistema" });
   } catch (error) {
     console.log(error);
     await t.rollback();

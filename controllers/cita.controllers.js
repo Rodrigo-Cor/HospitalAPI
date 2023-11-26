@@ -20,8 +20,8 @@ const fetchUniqueConsultorios = async () =>
     ],
   });
 
-const fetchDoctorsWithConsultorios = async () => {
-  return await Medico.findAll({
+const fetchDoctorsWithConsultorios = async () =>
+  await Medico.findAll({
     attributes: ["no_empleado", "especialidad"],
     order: [
       ["especialidad", "ASC"],
@@ -35,6 +35,7 @@ const fetchDoctorsWithConsultorios = async () => {
         include: [
           {
             model: HorarioConsultorio,
+            required: true,
             where: { disponible: true },
             attributes: {
               exclude: [
@@ -51,10 +52,14 @@ const fetchDoctorsWithConsultorios = async () => {
       {
         model: Usuario,
         attributes: ["nombre", "ap_paterno", "ap_materno"],
+        where: {
+          fecha_fin: {
+            [Sequelize.Op.is]: null,
+          },
+        },
       },
     ],
   });
-};
 
 citaController.getDoctors = async (req, res) => {
   try {
@@ -64,22 +69,8 @@ citaController.getDoctors = async (req, res) => {
       return res.json([]);
     }
 
-    const doctorsUnique = doctorsWithConsultorios.reduce(
-      (accumulator, currentValue) => {
-        if (
-          !accumulator.some(
-            ({ no_empleado }) => no_empleado === currentValue.no_empleado
-          )
-        ) {
-          accumulator.push(currentValue);
-        }
-        return accumulator;
-      },
-      []
-    );
-
     const availableDoctors = await Promise.all(
-      doctorsUnique.map(
+      doctorsWithConsultorios.map(
         async ({
           no_empleado,
           especialidad,

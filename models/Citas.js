@@ -1,6 +1,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../utils/database.util");
 const Paciente = require("./Pacientes");
+const { getServerUser, hookInsertDeleteAfter } = require("../utils/hooks.util");
 
 const Cita = sequelize.define(
   "Citas",
@@ -38,6 +39,19 @@ const Cita = sequelize.define(
   {
     timestamps: false,
     tableName: "Citas",
+    hooks: {
+      afterDestroy: async (cita, options) => {
+        const id_cita = cita.dataValues["id"];
+        const { user, server } = await getServerUser();
+        await hookInsertDeleteAfter({
+          PK: id_cita,
+          type: "DELETE",
+          user,
+          server,
+          table: "Citas",
+        });
+      },
+    },
   }
 );
 
@@ -46,7 +60,6 @@ Paciente.hasMany(Cita, {
   sourceKey: "nss",
   targetKey: "nss",
 });
-
 
 Cita.belongsTo(Paciente, {
   foreignKey: "nss",

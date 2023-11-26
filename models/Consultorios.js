@@ -13,7 +13,7 @@ const Consultorio = sequelize.define(
     },
     disponible: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
       validate: {
         isIn: [[0, 1]],
       },
@@ -32,6 +32,12 @@ Medico.hasOne(Consultorio, {
 });
 
 HorarioConsultorio.hasOne(Consultorio, {
+  foreignKey: "consultorio",
+  sourceKey: "consultorio",
+  targetKey: "consultorio",
+});
+
+Consultorio.hasMany(HorarioConsultorio, {
   foreignKey: "consultorio",
   sourceKey: "consultorio",
   targetKey: "consultorio",

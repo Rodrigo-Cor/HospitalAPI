@@ -1,6 +1,8 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../utils/database.util");
 const Cita = require("./Citas");
+const { getServerUser, hookInsertDeleteAfter } = require("../utils/hooks.util");
+
 const HorarioConsultorio = sequelize.define(
   "HorariosConsultorios",
   {
@@ -20,7 +22,7 @@ const HorarioConsultorio = sequelize.define(
     },
     disponible: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
       defaultValue: 1,
       validate: {
         isIn: {
@@ -40,13 +42,26 @@ const HorarioConsultorio = sequelize.define(
   {
     timestamps: false,
     tableName: "HorariosConsultorios",
+    hooks: {
+      afterDestroy: async (horarioconsultorio, options) => {
+        const id_horario = horarioconsultorio.dataValues["id"];
+        const { user, server } = await getServerUser();
+        await hookInsertDeleteAfter({
+          PK: id_horario,
+          type: "DELETE",
+          user,
+          server,
+          table: "HorariosConsultorios",
+        });
+      },
+    },
   }
 );
 
 Cita.hasOne(HorarioConsultorio, {
   foreignKey: "id", //FK de la tabla que tiene PK
   sourceKey: "id_horario", //FK de la tabla que tiene FK
-  targetKey: "id_horario",  //PK de la tabla que tiene FK
+  targetKey: "id_horario", //PK de la tabla que tiene FK
 });
 
 HorarioConsultorio.belongsTo(Cita, {

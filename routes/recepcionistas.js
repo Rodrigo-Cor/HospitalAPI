@@ -9,5 +9,6 @@ router.get("/fetchAppointmentsToday", recepcionista.getAppointmentsToday);
 router.get("/listConsultorios", recepcionista.getConsultorios);
 router.post("/fetchScheduledAppointments", recepcionista.getScheduledAppointments);
 router.delete("/deletePatient", recepcionista.deletePatient);
+router.delete("/deleteDoctor", recepcionista.deleteDoctor);
 
 module.exports = router;
