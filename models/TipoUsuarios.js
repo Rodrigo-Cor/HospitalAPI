@@ -4,9 +4,14 @@ const sequelize = require("../utils/database.util");
 const TipoUsuario = sequelize.define(
   "TipoUsuarios",
   {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
     tipo_usuario: {
       type: DataTypes.STRING(50),
-      primaryKey: true,
+      allowNull: false,
     },
   },
   {
@@ -28,7 +33,5 @@ Status.belongsTo(Cita, {
   targetKey: "status", // FK de la tabla que tiene FK
 });
 */
-
-
 
 module.exports = TipoUsuario;

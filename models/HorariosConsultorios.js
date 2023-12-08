@@ -4,7 +4,7 @@ const Cita = require("./Citas");
 const { getServerUser, hookInsertDeleteAfter } = require("../utils/hooks.util");
 
 const HorarioConsultorio = sequelize.define(
-  "HorariosConsultorios",
+  "HorarioConsultorio",
   {
     id: {
       type: DataTypes.INTEGER,

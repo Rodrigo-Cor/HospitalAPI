@@ -2,11 +2,16 @@ const { DataTypes } = require("sequelize");
 const sequelize = require("../utils/database.util");
 const Medico = require("./Medicos");
 const Especialidad = sequelize.define(
-  "Especialidades",
+  "Especialidad",
   {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
     especialidad: {
       type: DataTypes.STRING(50),
-      primaryKey: true,
+      allowNull: false,
     },
   },
   {
@@ -16,15 +21,16 @@ const Especialidad = sequelize.define(
 );
 
 Medico.hasOne(Especialidad, {
-  foreignKey: "especialidad",
+  foreignKey: "id",
   sourceKey: "especialidad",
   targetKey: "especialidad",
 });
 
 Especialidad.belongsTo(Medico, {
-  foreignKey: "especialidad",
-  sourceKey: "especialidad",
+  foreignKey: "id",
+  sourceKey: "id",
   targetKey: "especialidad",
 });
+
 
 module.exports = Especialidad;

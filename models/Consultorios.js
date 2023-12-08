@@ -49,10 +49,5 @@ Consultorio.belongsTo(Medico, {
   targetKey: "consultorio",
 });
 
-Consultorio.belongsTo(HorarioConsultorio, {
-  foreignKey: "consultorio",
-  sourceKey: "consultorio",
-  targetKey: "consultorio",
-});
 
 module.exports = Consultorio;

@@ -18,11 +18,11 @@ const Medico = sequelize.define(
       },
     },
     especialidad: {
-      type: DataTypes.STRING,
+      type: DataTypes.INTEGER,
       allowNull: false,
       references: {
         model: "Especialidad",
-        key: "especialidad",
+        key: "id",
       },
     },
     consultorio: {

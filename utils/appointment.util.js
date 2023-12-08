@@ -1,9 +1,12 @@
+const Cita = require("../models/Citas.js");
+const HorarioConsultorio = require("../models/HorariosConsultorios.js");
 const Servicio = require("../models/Servicios.js");
 
-const fetchConsultaCost = async (especialidad) => {
+const fetchConsultaCost = async (nombre) => {
+  console.log(nombre);
   const servicio = await Servicio.findOne({
     where: {
-      nombre: "Consulta " + especialidad.toLowerCase(),
+      nombre: nombre,
     },
     attributes: ["costo"],
   });
@@ -11,10 +14,28 @@ const fetchConsultaCost = async (especialidad) => {
 };
 
 const isOnTime = (date) => {
-  const oneDayAgo = new Date();
-  oneDayAgo.setHours(oneDayAgo.getHours() - 24);
+  const today = new Date();
+
   const dateAppointment = new Date(date);
-  return oneDayAgo < dateAppointment;
+  dateAppointment.setHours(dateAppointment.getHours() - 48);
+  
+  return today < dateAppointment;
 };
 
-module.exports = {fetchConsultaCost, isOnTime};
+const checkAppointmentAvailability = async ({ nss, fecha_hora_inicio }) => {
+  const oneAppointment = await Cita.findOne({
+    where: {
+      nss: nss,
+      status: 1,
+    },
+    include: {
+      model: HorarioConsultorio,
+      where: {
+        fecha_hora_inicio: fecha_hora_inicio,
+      },
+    },
+  });
+  return oneAppointment ? false : true;
+};
+
+module.exports = { fetchConsultaCost, isOnTime, checkAppointmentAvailability };

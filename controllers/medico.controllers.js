@@ -7,16 +7,11 @@ const Usuario = require("../models/Usuarios.js");
 const Consultorio = require("../models/Consultorios.js");
 const sequelize = require("../utils/database.util");
 const HorarioConsultorio = require("../models/HorariosConsultorios.js");
+const Especialidad = require("../models/Especialidades.js");
 
 const medicoController = {};
 
-const hashPassword = (password) => {
-  try {
-    return crypto.SHA256(password).toString();
-  } catch (error) {
-    console.log(error);
-  }
-};
+const hashPassword = (password) => crypto.SHA256(password).toString();
 
 medicoController.register = async (req, res) => {
   const t = await sequelize.transaction();
@@ -33,10 +28,32 @@ medicoController.register = async (req, res) => {
       password,
     } = req.body;
 
+    const disponible = await Consultorio.findOne({
+      where: {
+        consultorio: consultorio,
+        disponible: true,
+      },
+    });
+
+    if (!disponible) {
+      return res.status(400).json({ message: "Consultorio ocupado" });
+    }
+
+    const especialidadID = await Especialidad.findOne({
+      where: {
+        especialidad: especialidad,
+      },
+      attributes: ["id"],
+    });
+
+    if (!especialidadID) {
+      return res.status(400).json({ message: "Especialidad no encontrada" });
+    }
+
     await Usuario.create(
       {
         correo: correo,
-        tipo_usuario: "Medico",
+        tipo_usuario: 2,
         nombre: nombre,
         ap_paterno: ap_paterno,
         ap_materno: ap_materno,
@@ -49,7 +66,7 @@ medicoController.register = async (req, res) => {
       {
         no_empleado: no_empleado,
         correo: correo,
-        especialidad: especialidad,
+        especialidad: especialidadID.id,
         consultorio: consultorio,
         telefono: telefono,
       },
@@ -73,7 +90,7 @@ medicoController.register = async (req, res) => {
   }
 };
 
-const fetchAppointmentInfo = async (consultorio) =>
+const fetchAppointmentDoctorInfo = async (consultorio) =>
   await Cita.findAll({
     attributes: ["nss", "id_horario", "id", "status"],
     include: [
@@ -99,12 +116,11 @@ const fetchAppointmentInfo = async (consultorio) =>
     order: [[HorarioConsultorio, "consultorio", "ASC"]],
   });
 
-
 medicoController.showAppointment = async (req, res) => {
   try {
     const { consultorio } = req.body;
 
-    const appointmentsInfo = await fetchAppointmentInfo(consultorio);
+    const appointmentsInfo = await fetchAppointmentDoctorInfo(consultorio);
 
     const appointmentsInfoPatient = appointmentsInfo.map(
       ({
@@ -112,7 +128,7 @@ medicoController.showAppointment = async (req, res) => {
         id,
         id_horario,
         status,
-        HorariosConsultorio: { fecha_hora_inicio, fecha_hora_final },
+        HorarioConsultorio: { fecha_hora_inicio, fecha_hora_final },
         Paciente: {
           Usuario: { nombre, ap_paterno, ap_materno },
         },

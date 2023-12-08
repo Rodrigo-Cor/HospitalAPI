@@ -1,4 +1,5 @@
 const crypto = require("crypto-js");
+const { Sequelize } = require("sequelize");
 
 const HorarioConsultorio = require("../models/HorariosConsultorios.js");
 const Consultorio = require("../models/Consultorios.js");
@@ -7,69 +8,23 @@ const Usuario = require("../models/Usuarios.js");
 const Cita = require("../models/Citas.js");
 const Paciente = require("../models/Pacientes.js");
 const Medico = require("../models/Medicos.js");
+const Especialidad = require("../models/Especialidades.js");
 
 const sequelize = require("../utils/database.util");
 const { fetchConsultaCost } = require("../utils/appointment.util.js");
 
-const { Sequelize } = require("sequelize");
-
 const recepcionistaController = {};
 
-const hashPassword = (password) => {
-  try {
-    return crypto.SHA256(password).toString();
-  } catch (error) {
-    console.log(error);
-  }
-};
+const hashPassword = (password) => crypto.SHA256(password).toString();
 
-const fetchScheduledAppointments = async (nss) => {
-  try {
-    const oneDayAgo = new Date();
-    oneDayAgo.setHours(oneDayAgo.getHours() - 24);
-
-    const appointmentsData = await Cita.findAll({
-      attributes: ["id_horario", "status"],
-      where: {
-        nss: nss,
-        status: 1,
+const fetchActiveUsers = async () => {
+  const activeUsers = await Usuario.findAll({
+    where: {
+      fecha_fin: {
+        [Sequelize.Op.is]: null,
       },
-      include: [
-        {
-          model: HorarioConsultorio,
-          attributes: ["fecha_hora_inicio", "consultorio"],
-          where: {
-            fecha_hora_inicio: { [Sequelize.Op.lte]: oneDayAgo },
-          },
-          include: {
-            model: Consultorio,
-            attributes: ["consultorio"],
-            include: {
-              model: Medico,
-              attributes: ["especialidad", "correo"],
-              include: {
-                model: Usuario,
-                attributes: ["nombre", "ap_paterno", "ap_materno"],
-              },
-            },
-          },
-        },
-        {
-          model: Paciente,
-          attributes: ["correo", "metodo_pago"],
-          include: {
-            model: Usuario,
-            attributes: ["nombre", "ap_paterno", "ap_materno"],
-          },
-        },
-      ],
-    });
-
-    return appointmentsData;
-  } catch (error) {
-    console.log(error);
-    return res.status(500).json({ message: error.message });
-  }
+    },
+  });
 };
 
 const fetchEmailAndSchedules = async (nss) => {
@@ -80,8 +35,9 @@ const fetchEmailAndSchedules = async (nss) => {
   const citas = await Cita.findAll({
     where: {
       nss: nss,
+      status: 1,
     },
-    attributes: ["id_horario"],
+    attributes: ["id_horario", "id"],
   });
 
   return { correo, citas };
@@ -93,7 +49,9 @@ recepcionistaController.deletePatient = async (req, res) => {
   try {
     const { nss } = req.body;
     const { correo, citas } = await fetchEmailAndSchedules(nss);
+
     const idHorarios = citas.map(({ id_horario }) => id_horario);
+    const idCitas = citas.map(({ id }) => id);
 
     await HorarioConsultorio.update(
       {
@@ -110,7 +68,7 @@ recepcionistaController.deletePatient = async (req, res) => {
     await Cita.destroy(
       {
         where: {
-          nss: nss,
+          id: idCitas,
         },
       },
       { transaction: t }
@@ -181,12 +139,12 @@ recepcionistaController.deleteDoctor = async (req, res) => {
       citas: {
         correo,
         consultorio,
-        Consultorio: { HorariosConsultorios },
+        Consultorio: { HorarioConsultorios },
       },
     } = await fetchEmailAndAppointments(no_empleado);
 
-    const idHorarios = HorariosConsultorios.map(({ id }) => id);
-    const idCitas = HorariosConsultorios.map((citas) => citas.Cita["id"]);
+    const idHorarios = HorarioConsultorios.map(({ id }) => id);
+    const idCitas = HorarioConsultorios.map((citas) => citas.Cita["id"]);
 
     await Cita.destroy({
       where: {
@@ -239,6 +197,55 @@ recepcionistaController.deleteDoctor = async (req, res) => {
   }
 };
 
+const fetchScheduledAppointments = async (nss) => {
+  const twoDaysAfter = new Date();
+  twoDaysAfter.setHours(twoDaysAfter.getHours() + 48);
+
+  const appointmentsData = await Cita.findAll({
+    attributes: ["id_horario", "status"],
+    where: {
+      nss: nss,
+      status: 1,
+    },
+    include: [
+      {
+        model: HorarioConsultorio,
+        attributes: ["fecha_hora_inicio", "consultorio"],
+        where: {
+          fecha_hora_inicio: { [Sequelize.Op.lte]: twoDaysAfter },
+        },
+        include: {
+          model: Consultorio,
+          attributes: ["consultorio"],
+          include: {
+            model: Medico,
+            attributes: ["especialidad", "correo"],
+            include: [
+              {
+                model: Usuario,
+                attributes: ["nombre", "ap_paterno", "ap_materno"],
+              },
+              {
+                model: Especialidad,
+                attributes: ["especialidad"],
+              },
+            ],
+          },
+        },
+      },
+      {
+        model: Paciente,
+        attributes: ["correo", "metodo_pago"],
+        include: {
+          model: Usuario,
+          attributes: ["nombre", "ap_paterno", "ap_materno"],
+        },
+      },
+    ],
+  });
+  return appointmentsData;
+};
+
 recepcionistaController.getScheduledAppointments = async (req, res) => {
   try {
     const { nss } = req.body;
@@ -259,11 +266,11 @@ recepcionistaController.getScheduledAppointments = async (req, res) => {
       sheduledAppointments.map(
         async ({
           id_horario,
-          HorariosConsultorio: {
+          HorarioConsultorio: {
             fecha_hora_inicio,
             Consultorio: {
               Medico: {
-                especialidad,
+                Especialidad: { especialidad },
                 Usuario: {
                   nombre: nombreMedico,
                   ap_paterno: paternoMedico,
@@ -273,7 +280,10 @@ recepcionistaController.getScheduledAppointments = async (req, res) => {
             },
           },
         }) => {
-          const costo = (await fetchConsultaCost(especialidad)) * 0.5;
+          const costo =
+            (await fetchConsultaCost(
+              "Consulta " + especialidad.toLowerCase()
+            )) * 0.5;
           costoTotal += costo;
           const medico =
             nombreMedico + " " + paternoMedico + " " + maternoMedico;

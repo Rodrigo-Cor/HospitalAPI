@@ -5,9 +5,13 @@ const Cita = require("../models/Citas.js");
 const Medico = require("../models/Medicos.js");
 const Usuario = require("../models/Usuarios.js");
 const Consultorio = require("../models/Consultorios.js");
+const Especialidad = require("../models/Especialidades.js");
 
 const sequelize = require("../utils/database.util");
-const { fetchConsultaCost } = require("../utils/appointment.util.js");
+const {
+  fetchConsultaCost,
+  checkAppointmentAvailability,
+} = require("../utils/appointment.util.js");
 
 const { Sequelize } = require("sequelize");
 
@@ -20,14 +24,28 @@ const fetchUniqueConsultorios = async () =>
     ],
   });
 
-const fetchDoctorsWithConsultorios = async () =>
-  await Medico.findAll({
+const fetchDoctorsWithConsultorios = async () => {
+  const today = new Date();
+  const hoursToday = today.getUTCHours();
+  const date72HoursAfter = new Date(today);
+  date72HoursAfter.setUTCHours(hoursToday + 72);
+
+  return await Medico.findAll({
     attributes: ["no_empleado", "especialidad"],
-    order: [
-      ["especialidad", "ASC"],
-      ["consultorio", "ASC"],
-    ],
     include: [
+      {
+        model: Especialidad,
+        attributes: ["especialidad"],
+      },
+      {
+        model: Usuario,
+        attributes: ["nombre", "ap_paterno", "ap_materno"],
+        where: {
+          fecha_fin: {
+            [Sequelize.Op.is]: null,
+          },
+        },
+      },
       {
         model: Consultorio,
         required: true,
@@ -36,7 +54,12 @@ const fetchDoctorsWithConsultorios = async () =>
           {
             model: HorarioConsultorio,
             required: true,
-            where: { disponible: true },
+            where: {
+              disponible: true,
+              fecha_hora_inicio: {
+                [Sequelize.Op.gte]: date72HoursAfter,
+              },
+            },
             attributes: {
               exclude: [
                 "id",
@@ -49,47 +72,53 @@ const fetchDoctorsWithConsultorios = async () =>
           },
         ],
       },
-      {
-        model: Usuario,
-        attributes: ["nombre", "ap_paterno", "ap_materno"],
-        where: {
-          fecha_fin: {
-            [Sequelize.Op.is]: null,
-          },
-        },
-      },
+    ],
+    order: [
+      [Especialidad, "especialidad", "ASC"],
+      ["consultorio", "ASC"],
     ],
   });
+};
 
 citaController.getDoctors = async (req, res) => {
   try {
     const doctorsWithConsultorios = await fetchDoctorsWithConsultorios();
-
     if (!doctorsWithConsultorios.length) {
       return res.json([]);
     }
+
+    let specialtiesCost = [];
 
     const availableDoctors = await Promise.all(
       doctorsWithConsultorios.map(
         async ({
           no_empleado,
-          especialidad,
+          Especialidad: { especialidad },
           Consultorio: { consultorio },
           Usuario: { nombre, ap_paterno, ap_materno },
         }) => {
+          const costo = await fetchConsultaCost(
+            "Consulta " + especialidad.toLowerCase()
+          );
+          const existingEntry = specialtiesCost.find(
+            (speciality) => speciality.especialidad === especialidad
+          );
+
+          if (!existingEntry) {
+            specialtiesCost = [...specialtiesCost, { especialidad, costo }];
+          }
+
           const nombreCompleto = nombre + " " + ap_paterno + " " + ap_materno;
           return {
-            no_empleado: no_empleado,
-            especialidad: especialidad,
-            costo: await fetchConsultaCost(especialidad),
-            nombreCompleto: nombreCompleto,
-            consultorio: consultorio,
+            no_empleado,
+            especialidad,
+            nombreCompleto,
+            consultorio,
           };
         }
       )
     );
-
-    return res.json(availableDoctors);
+    return res.json({ availableDoctors, specialtiesCost });
   } catch (error) {
     console.error("Error al obtener doctores:", error);
     return res.status(500).json({ message: "Error al obtener doctores" });
@@ -127,7 +156,13 @@ citaController.getAppointmentsDays = async (req, res) => {
 citaController.scheduleAppointment = async (req, res) => {
   const t = await sequelize.transaction();
   try {
-    const { nss, id_horario } = req.body;
+    const { nss, id_horario, fecha_hora_inicio } = req.body;
+
+    if (!checkAppointmentAvailability({ nss, fecha_hora_inicio })) {
+      return res
+        .status(400)
+        .json({ message: "Ya tienes una cita agendada a esa misma hora" });
+    }
 
     const citaExisting = await Cita.findOne({
       where: {
@@ -156,7 +191,8 @@ citaController.scheduleAppointment = async (req, res) => {
           where: {
             id: id,
           },
-        }
+        },
+        { transaction: t }
       );
     }
 

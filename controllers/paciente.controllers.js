@@ -9,16 +9,11 @@ const Consultorio = require("../models/Consultorios.js");
 const { isOnTime } = require("../utils/appointment.util.js");
 
 const sequelize = require("../utils/database.util");
+const Especialidad = require("../models/Especialidades.js");
 
 const pacienteController = {};
 
-const hashPassword = (password) => {
-  try {
-    return crypto.SHA256(password).toString();
-  } catch (error) {
-    console.log(error);
-  }
-};
+const hashPassword = (password) => crypto.SHA256(password).toString();
 
 pacienteController.register = async (req, res) => {
   const t = await sequelize.transaction();
@@ -34,12 +29,10 @@ pacienteController.register = async (req, res) => {
       metodo_pago,
     } = req.body;
 
-    console.log(hashPassword(password).length);
-
     await Usuario.create(
       {
         correo: correo,
-        tipo_usuario: "Paciente",
+        tipo_usuario: 1,
         nombre: nombre,
         ap_paterno: ap_paterno,
         ap_materno: ap_materno,
@@ -83,37 +76,41 @@ const fetchAppointmentsPatient = async (nss) =>
         include: {
           model: Medico,
           attributes: ["especialidad"],
-          include: {
-            model: Usuario,
-            attributes: ["nombre", "ap_paterno", "ap_materno"],
-          },
+          include: [
+            {
+              model: Usuario,
+              attributes: ["nombre", "ap_paterno", "ap_materno"],
+            },
+            {
+              model: Especialidad,
+              attributes: ["especialidad"],
+            },
+          ],
         },
       },
     },
     order: [
       [HorarioConsultorio, "fecha_hora_inicio", "ASC"],
-      [HorarioConsultorio, Consultorio, "consultorio", "ASC"],
+      [HorarioConsultorio, "consultorio", "ASC"],
     ],
   });
 
 pacienteController.showAppointment = async (req, res) => {
   try {
     const { nss } = req.body;
-
     const appointmentsPatient = await fetchAppointmentsPatient(nss);
-
     const appointmentsInfoPatient = appointmentsPatient.map(
       ({
         id,
         id_horario,
         status,
-        HorariosConsultorio: {
+        HorarioConsultorio: {
           fecha_hora_inicio,
           fecha_hora_final,
           Consultorio: {
             consultorio: consultorio,
             Medico: {
-              especialidad: especialidad,
+              Especialidad: { especialidad },
               Usuario: {
                 nombre: nombre,
                 ap_paterno: ap_paterno,
@@ -136,7 +133,6 @@ pacienteController.showAppointment = async (req, res) => {
         };
       }
     );
-
     return res.json(appointmentsInfoPatient);
   } catch (error) {
     return res.status(500).json({ message: error.message });

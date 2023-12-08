@@ -5,6 +5,7 @@ const Paciente = require("../models/Pacientes.js");
 const Medico = require("../models/Medicos.js");
 const Recepcionista = require("../models/Recepcionistas.js");
 const sequelize = require("../utils/database.util");
+const TipoUsuario = require("../models/TipoUsuarios.js");
 
 const userController = {};
 
@@ -26,22 +27,22 @@ userController.getConnection = async (req, res) => {
 
     return res.json({ message: "Conexión exitosa" });
   } catch (error) {
-    return res.status(500).json({ message: "Error en el servidor" });
+    return res.status(500).json({ message: error });
   }
 };
 
 userController.getInformation = async (req, res) => {
-  const { correo, typeUser } = req.body;
+  const { correo, tipo_usuario } = req.body;
   try {
     const userModels = {
-      patient: Paciente,
-      doctor: Medico,
-      recepcionist: Recepcionista,
+      Paciente: Paciente,
+      Medico: Medico,
+      Recepcionista: Recepcionista,
     };
 
-    const userModel = userModels[typeUser];
+    const typeUser = userModels[tipo_usuario];
     const user = (
-      await userModel.findOne({
+      await typeUser.findOne({
         where: {
           correo: correo,
         },
@@ -50,7 +51,7 @@ userController.getInformation = async (req, res) => {
           {
             model: Usuario,
             attributes: {
-              exclude: ["correo", "tipo_usuario", "password", "fecha_fin"],
+              exclude: ["correo", "password", "fecha_fin"],
             },
           },
         ],
@@ -74,7 +75,6 @@ userController.deletePatient = async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const patient = await Paciente.findByPk(nss);
-    //console.log(JSON.parse(JSON.stringify(patient)));
 
     await Paciente.destroy({
       where: {
@@ -97,7 +97,7 @@ userController.deletePatient = async (req, res) => {
   } catch (error) {
     console.log(error);
     await t.rollback();
-    return res.status(500).json({ message: "Ocurrio un error" });
+    return res.status(500).json({ message: error });
   }
 };
 
@@ -121,24 +121,22 @@ userController.modifyPassword = async (req, res) => {
     return res.json({ message: "Contraseña modificada" });
   } catch (error) {
     console.log(error);
-    return res.status(500).json({ message: "Ocurrio un error" });
+    return res.status(500).json({ message: error });
   }
 };
 
 userController.loginUser = async (req, res) => {
   const { correo, password } = req.body;
   try {
-    const hashingPassword = hashPassword(password);
-
     const user = await Usuario.findByPk(correo, {
-      attributes: ["password", "fecha_fin"],
+      attributes: ["password", "fecha_fin", "tipo_usuario"],
     });
 
     if (!user) {
       return res.status(400).json({ message: "Registrate por favor" });
     }
 
-    const isMatch = user.password === hashingPassword;
+    const isMatch = user.password === password;
 
     if (user.fecha_fin) {
       return res.status(401).json({ message: "Usuario inactivo" });
@@ -146,10 +144,18 @@ userController.loginUser = async (req, res) => {
       return res.status(401).json({ message: "Contraseña incorrecta" });
     }
 
-    return res.json({ message: "Usuario loggueado" });
+    const { tipo_usuario } = (
+      await TipoUsuario.findOne({
+        where: {
+          id: user.tipo_usuario,
+        },
+      })
+    ).toJSON();
+
+    return res.json({ typeUser: tipo_usuario, isLogged: true });
   } catch (error) {
     console.log(error);
-    return res.status(500).json({ message: "Error en el servidor" });
+    return res.status(500).json({ message: error });
   }
 };
 
