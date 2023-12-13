@@ -3,7 +3,7 @@ const sequelize = require("../utils/database.util");
 const Usuario = require("./Usuarios");
 
 const Recepcionista = sequelize.define(
-  "Recepcionistas",
+  "Recepcionista",
   {
     no_empleado: {
       type: DataTypes.STRING(15),
@@ -13,14 +13,14 @@ const Recepcionista = sequelize.define(
       type: DataTypes.STRING(50),
       allowNull: false,
       references: {
-        model: "Usuarios",
+        model: "Usuario",
         key: "correo",
       },
     },
   },
   {
     timestamps: false,
-    tableName: "Recepcionistas",
+    tableName: "recepcionistas",
   }
 );
 

@@ -18,6 +18,10 @@ const Receta = sequelize.define(
         key: "id",
       },
     },
+    diagnostico: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
   },
   {
     timestamps: false,

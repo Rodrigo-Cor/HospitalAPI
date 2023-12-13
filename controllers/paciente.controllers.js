@@ -1,15 +1,17 @@
 const crypto = require("crypto-js");
 
+const sequelize = require("../utils/database.util");
 const Paciente = require("../models/Pacientes.js");
 const Usuario = require("../models/Usuarios.js");
 const Cita = require("../models/Citas.js");
 const Medico = require("../models/Medicos.js");
 const HorarioConsultorio = require("../models/HorariosConsultorios.js");
 const Consultorio = require("../models/Consultorios.js");
-const { isOnTime } = require("../utils/appointment.util.js");
-
-const sequelize = require("../utils/database.util");
 const Especialidad = require("../models/Especialidades.js");
+
+const { isOnTime } = require("../utils/appointment.util.js");
+const { fetchAppointmentsPatient } = require("../services/patientService.js");
+
 
 const pacienteController = {};
 
@@ -28,6 +30,12 @@ pacienteController.register = async (req, res) => {
       password,
       metodo_pago,
     } = req.body;
+
+    const user = await Usuario.findByPk(correo);
+
+    if (user) {
+      return res.status(400).json({ message: "El correo ya está registrado" });
+    }
 
     await Usuario.create(
       {
@@ -59,46 +67,11 @@ pacienteController.register = async (req, res) => {
   }
 };
 
-const fetchAppointmentsPatient = async (nss) =>
-  await Cita.findAll({
-    attributes: ["id", "id_horario", "status"],
-    where: {
-      nss: nss,
-    },
-    include: {
-      model: HorarioConsultorio,
-      attributes: ["consultorio", "fecha_hora_inicio", "fecha_hora_final"],
-      include: {
-        model: Consultorio,
-        attributes: {
-          exclude: ["disponible"],
-        },
-        include: {
-          model: Medico,
-          attributes: ["especialidad"],
-          include: [
-            {
-              model: Usuario,
-              attributes: ["nombre", "ap_paterno", "ap_materno"],
-            },
-            {
-              model: Especialidad,
-              attributes: ["especialidad"],
-            },
-          ],
-        },
-      },
-    },
-    order: [
-      [HorarioConsultorio, "fecha_hora_inicio", "ASC"],
-      [HorarioConsultorio, "consultorio", "ASC"],
-    ],
-  });
-
 pacienteController.showAppointment = async (req, res) => {
   try {
     const { nss } = req.body;
     const appointmentsPatient = await fetchAppointmentsPatient(nss);
+    /*
     const appointmentsInfoPatient = appointmentsPatient.map(
       ({
         id,
@@ -133,7 +106,8 @@ pacienteController.showAppointment = async (req, res) => {
         };
       }
     );
-    return res.json(appointmentsInfoPatient);
+    */
+    return res.json(appointmentsPatient);
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }

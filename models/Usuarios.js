@@ -9,7 +9,7 @@ const {
 const Bitacora = require("./Bitacoras");
 
 const Usuario = sequelize.define(
-  "Usuarios",
+  "Usuario",
   {
     correo: {
       type: DataTypes.STRING(50),
@@ -19,7 +19,7 @@ const Usuario = sequelize.define(
       type: DataTypes.STRING(50),
       allowNull: false,
       references: {
-        model: "TipoUsuarios",
+        model: "TipoUsuario",
         key: "tipo_usuario",
       },
     },
@@ -46,10 +46,9 @@ const Usuario = sequelize.define(
   },
   {
     timestamps: false,
-    tableName: "Usuarios",
+    tableName: "usuarios",
     hooks: {
       afterCreate: async (usuario, options) => {
-        console.log(options);
         const correo = usuario.dataValues["correo"];
         const { user, server } = await getServerUser();
         await hookInsertDeleteAfter({
@@ -57,7 +56,7 @@ const Usuario = sequelize.define(
           type: "INSERT",
           user,
           server,
-          table: "Usuarios",
+          table: "usuarios",
         });
       },
       afterUpdate: async (usuario, options) => {
@@ -75,7 +74,7 @@ const Usuario = sequelize.define(
           
           if (previousValue !== newValue) {
             await Bitacora.create({
-              tabla: "Usuarios",
+              tabla: "usuarios",
               operacion: "UPDATE",
               campo: field,
               valor: previousValue,
@@ -95,7 +94,7 @@ const Usuario = sequelize.define(
           type: "DELETE",
           user,
           server,
-          table: "Usuarios",
+          table: "usuarios",
         });
       },
     },

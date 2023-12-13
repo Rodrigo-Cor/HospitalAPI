@@ -4,7 +4,7 @@ const Paciente = require("./Pacientes");
 const { getServerUser, hookInsertDeleteAfter } = require("../utils/hooks.util");
 
 const Cita = sequelize.define(
-  "Citas",
+  "Cita",
   {
     id: {
       type: DataTypes.INTEGER,
@@ -15,7 +15,7 @@ const Cita = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "HorariosConsultorios",
+        model: "HorarioConsultorio",
         key: "id",
       },
     },
@@ -23,7 +23,7 @@ const Cita = sequelize.define(
       type: DataTypes.STRING(11),
       allowNull: false,
       references: {
-        model: "Pacientes",
+        model: "Paciente",
         key: "nss",
       },
     },
@@ -38,7 +38,7 @@ const Cita = sequelize.define(
   },
   {
     timestamps: false,
-    tableName: "Citas",
+    tableName: "citas",
     hooks: {
       afterDestroy: async (cita, options) => {
         const id_cita = cita.dataValues["id"];
@@ -48,7 +48,7 @@ const Cita = sequelize.define(
           type: "DELETE",
           user,
           server,
-          table: "Citas",
+          table: "citas",
         });
       },
     },

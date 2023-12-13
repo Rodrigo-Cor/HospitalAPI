@@ -16,7 +16,7 @@ const Especialidad = sequelize.define(
   },
   {
     timestamps: false,
-    tableName: "Especialidades",
+    tableName: "especialidades",
   }
 );
 
@@ -25,12 +25,5 @@ Medico.hasOne(Especialidad, {
   sourceKey: "especialidad",
   targetKey: "especialidad",
 });
-
-Especialidad.belongsTo(Medico, {
-  foreignKey: "id",
-  sourceKey: "id",
-  targetKey: "especialidad",
-});
-
 
 module.exports = Especialidad;

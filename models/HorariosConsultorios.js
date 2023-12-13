@@ -11,13 +11,12 @@ const HorarioConsultorio = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
-    consultorio: {
+    no_empleado: {
       type: DataTypes.INTEGER,
-      len: [0, 10],
       allowNull: false,
       references: {
-        model: "Consultorio",
-        key: "consultorio",
+        model: "Medico",
+        key: "no_empleado",
       },
     },
     disponible: {
@@ -41,7 +40,7 @@ const HorarioConsultorio = sequelize.define(
   },
   {
     timestamps: false,
-    tableName: "HorariosConsultorios",
+    tableName: "horarios_consultorios",
     hooks: {
       afterDestroy: async (horarioconsultorio, options) => {
         const id_horario = horarioconsultorio.dataValues["id"];
@@ -51,7 +50,7 @@ const HorarioConsultorio = sequelize.define(
           type: "DELETE",
           user,
           server,
-          table: "HorariosConsultorios",
+          table: "horarios_consultorios",
         });
       },
     },

@@ -2,7 +2,7 @@ const { DataTypes } = require("sequelize");
 const sequelize = require("../utils/database.util");
 
 const Bitacora = sequelize.define(
-  "Bitacoras",
+  "Bitacora",
   {
     id: {
       type: DataTypes.INTEGER,
@@ -49,7 +49,7 @@ const Bitacora = sequelize.define(
   },
   {
     timestamps: false,
-    tableName: "Bitacoras",
+    tableName: "bitacoras",
   }
 );
 

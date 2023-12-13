@@ -136,7 +136,10 @@ userController.loginUser = async (req, res) => {
       return res.status(400).json({ message: "Registrate por favor" });
     }
 
-    const isMatch = user.password === password;
+    console.log(user.dataValues);
+    
+
+    const isMatch = user.password === hashPassword(password);
 
     if (user.fecha_fin) {
       return res.status(401).json({ message: "Usuario inactivo" });

@@ -1,9 +1,10 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../utils/database.util");
 const Usuario = require("./Usuarios");
+const HorarioConsultorio = require("./HorariosConsultorios");
 
 const Medico = sequelize.define(
-  "Medicos",
+  "Medico",
   {
     no_empleado: {
       type: DataTypes.STRING,
@@ -13,7 +14,7 @@ const Medico = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
       references: {
-        model: "Usuarios",
+        model: "Usuario",
         key: "correo",
       },
     },
@@ -40,7 +41,7 @@ const Medico = sequelize.define(
   },
   {
     timestamps: false,
-    tableName: "Medicos",
+    tableName: "medicos",
   }
 );
 
@@ -49,5 +50,19 @@ Medico.hasOne(Usuario, {
   sourceKey: "correo",
   targetKey: "correo",
 });
+
+Medico.hasMany(HorarioConsultorio, {
+  foreignKey: "no_empleado",
+  sourceKey: "no_empleado",
+  targetKey: "no_empleado",
+});
+
+HorarioConsultorio.belongsTo(Medico, {
+  foreignKey: "no_empleado",
+  sourceKey: "no_empleado",
+  targetKey: "no_empleado",
+});
+
+
 
 module.exports = Medico;

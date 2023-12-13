@@ -8,7 +8,7 @@ const {
 } = require("../utils/hooks.util");
 
 const Paciente = sequelize.define(
-  "Pacientes",
+  "paciente",
   {
     nss: {
       type: DataTypes.STRING(11),
@@ -18,7 +18,7 @@ const Paciente = sequelize.define(
       type: DataTypes.STRING(50),
       allowNull: false,
       references: {
-        model: "Usuarios",
+        model: "Usuario",
         key: "correo",
       },
     },
@@ -33,7 +33,7 @@ const Paciente = sequelize.define(
   },
   {
     timestamps: false,
-    tableName: "Pacientes",
+    tableName: "pacientes",
     hooks: {
       afterCreate: async (patient, options) => {
         const nss = patient.dataValues["nss"];
@@ -43,7 +43,7 @@ const Paciente = sequelize.define(
           type: "INSERT",
           user,
           server,
-          table: "Pacientes",
+          table: "pacientes",
         });
       },
       afterUpdate: async (patient, options) => {
@@ -57,7 +57,7 @@ const Paciente = sequelize.define(
 
           if (previousValue !== newValue) {
             await Bitacora.create({
-              tabla: "Pacientes",
+              tabla: "pacientes",
               operacion: "UPDATE",
               campo: field,
               valor: previousValue,
@@ -77,7 +77,7 @@ const Paciente = sequelize.define(
           type: "DELETE",
           user,
           server,
-          table: "Pacientes",
+          table: "pacientes",
         });
       },
     },
