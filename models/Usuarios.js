@@ -46,7 +46,7 @@ const Usuario = sequelize.define(
   },
   {
     timestamps: false,
-    tableName: "Usuarios",
+    tableName: "usuarios",
     hooks: {
       afterCreate: async (usuario, options) => {
         console.log(options);

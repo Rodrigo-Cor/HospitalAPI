@@ -33,7 +33,7 @@ const Paciente = sequelize.define(
   },
   {
     timestamps: false,
-    tableName: "Pacientes",
+    tableName: "pacientes",
     hooks: {
       afterCreate: async (patient, options) => {
         const nss = patient.dataValues["nss"];

@@ -38,7 +38,7 @@ const Cita = sequelize.define(
   },
   {
     timestamps: false,
-    tableName: "Citas",
+    tableName: "citas",
     hooks: {
       afterDestroy: async (cita, options) => {
         const id_cita = cita.dataValues["id"];

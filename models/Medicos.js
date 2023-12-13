@@ -40,7 +40,7 @@ const Medico = sequelize.define(
   },
   {
     timestamps: false,
-    tableName: "Medicos",
+    tableName: "medicos",
   }
 );
 

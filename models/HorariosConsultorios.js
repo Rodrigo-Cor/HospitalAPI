@@ -41,7 +41,7 @@ const HorarioConsultorio = sequelize.define(
   },
   {
     timestamps: false,
-    tableName: "HorariosConsultorios",
+    tableName: "horarios_consultorios",
     hooks: {
       afterDestroy: async (horarioconsultorio, options) => {
         const id_horario = horarioconsultorio.dataValues["id"];

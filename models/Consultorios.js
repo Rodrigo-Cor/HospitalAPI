@@ -21,7 +21,7 @@ const Consultorio = sequelize.define(
   },
   {
     timestamps: false,
-    tableName: "Consultorios",
+    tableName: "consultorios",
   }
 );
 

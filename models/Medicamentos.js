@@ -2,7 +2,7 @@ const { DataTypes } = require("sequelize");
 const sequelize = require("../utils/database.util");
 
 const Medicamento = sequelize.define(
-  "Medicamentos",
+  "Medicamento",
   {
     id: {
       type: DataTypes.INTEGER,
@@ -21,14 +21,10 @@ const Medicamento = sequelize.define(
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
     },
-    cantidad_stock: {
-      type: DataTypes.NUMBER,
-      allowNull: false,
-    },
   },
   {
     timestamps: false,
-    tableName: "Medicamentos",
+    tableName: "medicamentos",
   }
 );
 

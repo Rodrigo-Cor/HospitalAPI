@@ -2,7 +2,7 @@ const { DataTypes } = require("sequelize");
 const sequelize = require("../utils/database.util");
 
 const Tratamiento = sequelize.define(
-  "Tratamientos",
+  "Tratamiento",
   {
     id: {
       type: DataTypes.INTEGER,
@@ -16,7 +16,7 @@ const Tratamiento = sequelize.define(
   },
   {
     timestamps: false,
-    tableName: "Tratamientos",
+    tableName: "tratamientos",
   }
 );
 
