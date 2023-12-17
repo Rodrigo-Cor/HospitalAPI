@@ -12,7 +12,6 @@ const Especialidad = require("../models/Especialidades.js");
 const { isOnTime } = require("../utils/appointment.util.js");
 const { fetchAppointmentsPatient } = require("../services/patientService.js");
 
-
 const pacienteController = {};
 
 const hashPassword = (password) => crypto.SHA256(password).toString();
@@ -71,45 +70,34 @@ pacienteController.showAppointment = async (req, res) => {
   try {
     const { nss } = req.body;
     const appointmentsPatient = await fetchAppointmentsPatient(nss);
-    /*
+
     const appointmentsInfoPatient = appointmentsPatient.map(
       ({
         id,
-        id_horario,
         status,
         HorarioConsultorio: {
           fecha_hora_inicio,
           fecha_hora_final,
-          Consultorio: {
-            consultorio: consultorio,
-            Medico: {
-              Especialidad: { especialidad },
-              Usuario: {
-                nombre: nombre,
-                ap_paterno: ap_paterno,
-                ap_materno: ap_materno,
-              },
-            },
+          Medico: {
+            consultorio,
+            Especialidad: { especialidad },
+            Usuario: { nombre, ap_paterno, ap_materno },
           },
         },
-      }) => {
-        return {
-          id,
-          id_horario,
-          medico: nombre + " " + ap_paterno + " " + ap_materno,
-          consultorio,
-          especialidad,
-          fecha_hora_inicio,
-          fecha_hora_final,
-          onTime: isOnTime(fecha_hora_inicio),
-          status,
-        };
-      }
+      }) => ({
+        id,
+        medico: nombre + " " + ap_paterno + " " + ap_materno,
+        consultorio,
+        especialidad,
+        fecha_hora_inicio,
+        fecha_hora_final,
+        onTime: isOnTime(fecha_hora_inicio),
+        status,
+      })
     );
-    */
-    return res.json(appointmentsPatient);
+    return res.send(appointmentsInfoPatient);
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(500).send({ message: error.message });
   }
 };
 

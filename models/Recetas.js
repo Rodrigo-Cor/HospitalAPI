@@ -1,12 +1,12 @@
 const { DataTypes } = require("sequelize");
-const Cita = require("./Citas");
 const RecetaTratamiento = require("./RecetasTratamientos");
 const RecetaMedicamento = require("./RecetasMedicamentos");
 const RecetaServicio = require("./RecetasServicios");
+const Cita = require("./Citas");
 const sequelize = require("../utils/database.util");
 
 const Receta = sequelize.define(
-  "Receta",
+  "Recetas",
   {
     id: {
       type: DataTypes.INTEGER,
@@ -17,7 +17,7 @@ const Receta = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "Citas",
+        model: "Cita",
         key: "id",
       },
     },
@@ -38,14 +38,9 @@ Cita.hasOne(Receta, {
   targetKey: "id",
 });
 
-Receta.belongsTo(Cita, {
-  foreignKey: "id_cita",
-  sourceKey: "id",
-  targetKey: "id",
-});
 
 Receta.hasMany(RecetaMedicamento, {
-  foreignKey: "id_receta",
+  foreignKey: "id_medicamento",
   sourceKey: "id",
   targetKey: "id",
 });
@@ -61,6 +56,5 @@ Receta.hasMany(RecetaServicio, {
   sourceKey: "id",
   targetKey: "id",
 });
-
 
 module.exports = Receta;

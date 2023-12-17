@@ -63,6 +63,4 @@ HorarioConsultorio.belongsTo(Medico, {
   targetKey: "no_empleado",
 });
 
-
-
 module.exports = Medico;

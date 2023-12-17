@@ -9,13 +9,7 @@ const TipoUsuario = require("../models/TipoUsuarios.js");
 
 const userController = {};
 
-const hashPassword = (password) => {
-  try {
-    return crypto.SHA256(password).toString();
-  } catch (error) {
-    console.log(error);
-  }
-};
+const hashPassword = (password) => crypto.SHA256(password).toString();
 
 userController.getConnection = async (req, res) => {
   try {
@@ -30,6 +24,45 @@ userController.getConnection = async (req, res) => {
     return res.status(500).json({ message: error });
   }
 };
+
+userController.loginUser = async (req, res) => {
+  const { correo, password } = req.body;
+  try {
+    const user = await Usuario.findByPk(correo, {
+      attributes: ["password", "fecha_fin", "tipo_usuario"],
+    });
+
+    if (!user) {
+      return res
+        .status(400)
+        .json({ message: "Usuario o contraseña incorrectos" });
+    }
+
+    const isMatch = user.password === hashPassword(password);
+
+    if (user.fecha_fin) {
+      return res.status(401).json({ message: "Usuario dado de baja" });
+    } else if (!isMatch) {
+      return res
+        .status(401)
+        .json({ message: "Usuario o contraseña incorrectos" });
+    }
+
+    const { tipo_usuario } = (
+      await TipoUsuario.findOne({
+        where: {
+          id: user.tipo_usuario,
+        },
+      })
+    ).toJSON();
+
+    return res.json({ typeUser: tipo_usuario, isLogged: true });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: error });
+  }
+};
+
 
 userController.getInformation = async (req, res) => {
   const { correo, tipo_usuario } = req.body;
@@ -70,6 +103,30 @@ userController.getInformation = async (req, res) => {
   }
 };
 
+userController.modifyPassword = async (req, res) => {
+  const { correo } = req.body;
+  try {
+    const user = await Usuario.findByPk(correo);
+
+    const newPassword = hashPassword(user.password);
+    await Usuario.update(
+      {
+        password: newPassword,
+      },
+      {
+        where: {
+          correo: correo,
+        },
+        individualHooks: true,
+      }
+    );
+    return res.json({ message: "Contraseña modificada" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: error });
+  }
+};
+
 userController.deletePatient = async (req, res) => {
   const { nss } = req.body;
   const t = await sequelize.transaction();
@@ -101,65 +158,5 @@ userController.deletePatient = async (req, res) => {
   }
 };
 
-userController.modifyPassword = async (req, res) => {
-  const { correo } = req.body;
-  try {
-    const user = await Usuario.findByPk(correo);
-
-    const newPassword = hashPassword(user.password);
-    await Usuario.update(
-      {
-        password: newPassword,
-      },
-      {
-        where: {
-          correo: correo,
-        },
-        individualHooks: true,
-      }
-    );
-    return res.json({ message: "Contraseña modificada" });
-  } catch (error) {
-    console.log(error);
-    return res.status(500).json({ message: error });
-  }
-};
-
-userController.loginUser = async (req, res) => {
-  const { correo, password } = req.body;
-  try {
-    const user = await Usuario.findByPk(correo, {
-      attributes: ["password", "fecha_fin", "tipo_usuario"],
-    });
-
-    if (!user) {
-      return res.status(400).json({ message: "Registrate por favor" });
-    }
-
-    console.log(user.dataValues);
-    
-
-    const isMatch = user.password === hashPassword(password);
-
-    if (user.fecha_fin) {
-      return res.status(401).json({ message: "Usuario inactivo" });
-    } else if (!isMatch) {
-      return res.status(401).json({ message: "Contraseña incorrecta" });
-    }
-
-    const { tipo_usuario } = (
-      await TipoUsuario.findOne({
-        where: {
-          id: user.tipo_usuario,
-        },
-      })
-    ).toJSON();
-
-    return res.json({ typeUser: tipo_usuario, isLogged: true });
-  } catch (error) {
-    console.log(error);
-    return res.status(500).json({ message: error });
-  }
-};
 
 module.exports = userController;

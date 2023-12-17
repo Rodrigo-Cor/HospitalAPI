@@ -53,6 +53,17 @@ const HorarioConsultorio = sequelize.define(
           table: "horarios_consultorios",
         });
       },
+      afterCreate: async (horarioconsultorio, options) => {
+        const id_horario = horarioconsultorio.dataValues["id"];
+        const { user, server } = await getServerUser();
+        await hookInsertDeleteAfter({
+          PK: id_horario,
+          type: "INSERT",
+          user,
+          server,
+          table: "horarios_consultorios",
+        });
+      },
     },
   }
 );

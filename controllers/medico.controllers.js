@@ -9,6 +9,8 @@ const sequelize = require("../utils/database.util");
 const HorarioConsultorio = require("../models/HorariosConsultorios.js");
 const Especialidad = require("../models/Especialidades.js");
 
+const { fetchAppointmentsDoctor } = require("../services/doctorService.js");
+
 const medicoController = {};
 
 const hashPassword = (password) => crypto.SHA256(password).toString();
@@ -39,14 +41,14 @@ medicoController.register = async (req, res) => {
       return res.status(400).json({ message: "Consultorio ocupado" });
     }
 
-    const especialidadID = await Especialidad.findOne({
+    const especialidadId = await Especialidad.findOne({
       where: {
         especialidad: especialidad,
       },
       attributes: ["id"],
     });
 
-    if (!especialidadID) {
+    if (!especialidadId) {
       return res.status(400).json({ message: "Especialidad no encontrada" });
     }
 
@@ -66,7 +68,7 @@ medicoController.register = async (req, res) => {
       {
         no_empleado: no_empleado,
         correo: correo,
-        especialidad: especialidadID.id,
+        especialidad: especialidadId.id,
         consultorio: consultorio,
         telefono: telefono,
       },
@@ -90,66 +92,36 @@ medicoController.register = async (req, res) => {
   }
 };
 
-const fetchAppointmentDoctorInfo = async (consultorio) =>
-  await Cita.findAll({
-    attributes: ["nss", "id_horario", "id", "status"],
-    include: [
-      {
-        model: HorarioConsultorio,
-        where: {
-          consultorio: consultorio,
-          disponible: false,
-        },
-        attributes: ["fecha_hora_inicio", "fecha_hora_final"],
-      },
-      {
-        model: Paciente,
-        attributes: {
-          exclude: ["nss", "metodo_pago", "telefono"],
-        },
-        include: {
-          model: Usuario,
-          attributes: ["nombre", "ap_paterno", "ap_materno"],
-        },
-      },
-    ],
-    order: [[HorarioConsultorio, "consultorio", "ASC"]],
-  });
-
 medicoController.showAppointment = async (req, res) => {
   try {
-    const { consultorio } = req.body;
+    const { no_empleado } = req.body;
 
-    const appointmentsInfo = await fetchAppointmentDoctorInfo(consultorio);
-
-    const appointmentsInfoPatient = appointmentsInfo.map(
+    const appointmentsDoctor = await fetchAppointmentsDoctor(no_empleado);
+    //return res.send(appointmentsDoctor);
+    const appointmentsInformationDoctor = appointmentsDoctor.map(
       ({
         nss,
-        id,
-        id_horario,
+        id: id_cita,
         status,
         HorarioConsultorio: { fecha_hora_inicio, fecha_hora_final },
         Paciente: {
           Usuario: { nombre, ap_paterno, ap_materno },
         },
-      }) => {
-        const paciente = nombre + " " + ap_paterno + " " + ap_materno;
-        return {
-          id,
-          nss,
-          paciente: paciente,
-          fecha_hora_inicio,
-          fecha_hora_final,
-          id_horario,
-          status,
-        };
-      }
+        Receta,
+      }) => ({
+        id_cita,
+        nss,
+        paciente: nombre + " " + ap_paterno + " " + ap_materno,
+        fecha_hora_inicio,
+        fecha_hora_final,
+        status,
+        id_receta: Receta?.id || null,
+        diagnostico: Receta?.diagnostico || null,
+      })
     );
-
-    return res.json(appointmentsInfoPatient);
+    return res.json(appointmentsInformationDoctor);
   } catch (error) {
-    console.log("Error al obtener citas:", error);
-    return res.status(500).json({ message: "Error al obtener citas" });
+    return res.status(500).json({ message: error.message });
   }
 };
 

@@ -2,10 +2,6 @@
 
 const HorarioConsultorio = require("../models/HorariosConsultorios.js");
 const Cita = require("../models/Citas.js");
-const Medico = require("../models/Medicos.js");
-const Usuario = require("../models/Usuarios.js");
-const Consultorio = require("../models/Consultorios.js");
-const Especialidad = require("../models/Especialidades.js");
 
 const sequelize = require("../utils/database.util");
 const {
@@ -13,140 +9,88 @@ const {
   checkAppointmentAvailability,
 } = require("../utils/appointment.util.js");
 
+const {
+  fetchDoctorsSchedulesAvailable,
+} = require("../services/appointmentService.js");
+
 const { Sequelize } = require("sequelize");
 
 const citaController = {};
 
-const fetchUniqueConsultorios = async () =>
-  await Consultorio.findAll({
-    attributes: [
-      [Sequelize.fn("DISTINCT", Sequelize.col("consultorio")), "consultorio"],
-    ],
-  });
-
-const fetchDoctorsWithConsultorios = async () => {
-  const today = new Date();
-  const hoursToday = today.getUTCHours();
-  const date72HoursAfter = new Date(today);
-  date72HoursAfter.setUTCHours(hoursToday + 72);
-
-  return await Medico.findAll({
-    attributes: ["no_empleado", "especialidad"],
-    include: [
-      {
-        model: Especialidad,
-        attributes: ["especialidad"],
-      },
-      {
-        model: Usuario,
-        attributes: ["nombre", "ap_paterno", "ap_materno"],
-        where: {
-          fecha_fin: {
-            [Sequelize.Op.is]: null,
-          },
-        },
-      },
-      {
-        model: Consultorio,
-        required: true,
-        attributes: ["consultorio"],
-        include: [
-          {
-            model: HorarioConsultorio,
-            required: true,
-            where: {
-              disponible: true,
-              fecha_hora_inicio: {
-                [Sequelize.Op.gte]: date72HoursAfter,
-              },
-            },
-            attributes: {
-              exclude: [
-                "id",
-                "consultorio",
-                "fecha_hora_inicio",
-                "fecha_hora_final",
-                "disponible",
-              ],
-            },
-          },
-        ],
-      },
-    ],
-    order: [
-      [Especialidad, "especialidad", "ASC"],
-      ["consultorio", "ASC"],
-    ],
-  });
-};
-
 citaController.getDoctors = async (req, res) => {
   try {
-    const doctorsWithConsultorios = await fetchDoctorsWithConsultorios();
-    if (!doctorsWithConsultorios.length) {
+    const doctorsSchedulesAvailable = await fetchDoctorsSchedulesAvailable();
+    //return res.send(doctorsWithConsultorios);
+
+    if (!doctorsSchedulesAvailable.length) {
       return res.json([]);
     }
 
-    let specialtiesCost = [];
+    let existingSpecialties = [];
 
-    const availableDoctors = await Promise.all(
-      doctorsWithConsultorios.map(
-        async ({
-          no_empleado,
-          Especialidad: { especialidad },
-          Consultorio: { consultorio },
-          Usuario: { nombre, ap_paterno, ap_materno },
-        }) => {
-          const costo = await fetchConsultaCost(
-            "Consulta " + especialidad.toLowerCase()
-          );
-          const existingEntry = specialtiesCost.find(
-            (speciality) => speciality.especialidad === especialidad
-          );
-
-          if (!existingEntry) {
-            specialtiesCost = [...specialtiesCost, { especialidad, costo }];
+    const specialtiesCost = await Promise.all(
+      doctorsSchedulesAvailable.map(
+        async ({ Especialidad: { especialidad } }) => {
+          if (!existingSpecialties.includes(especialidad)) {
+            existingSpecialties.push(especialidad);
+            const costo = await fetchConsultaCost("Consulta " + especialidad);
+            return { especialidad, costo };
+          } else {
+            return null;
           }
-
-          const nombreCompleto = nombre + " " + ap_paterno + " " + ap_materno;
-          return {
-            no_empleado,
-            especialidad,
-            nombreCompleto,
-            consultorio,
-          };
         }
       )
     );
-    return res.json({ availableDoctors, specialtiesCost });
+
+    const filteredSpecialtiesCost = specialtiesCost.filter(
+      (specialityCost) => specialityCost !== null
+    );
+
+    const availableDoctors = doctorsSchedulesAvailable.map(
+      ({
+        no_empleado,
+        Especialidad: { especialidad },
+        consultorio,
+        Usuario: { nombre, ap_paterno, ap_materno },
+      }) => ({
+        no_empleado,
+        especialidad,
+        nombreCompleto: nombre + " " + ap_paterno + " " + ap_materno,
+        consultorio,
+      })
+    );
+
+    return res.json({
+      availableDoctors,
+      specialtiesCost: filteredSpecialtiesCost,
+    });
   } catch (error) {
-    console.error("Error al obtener doctores:", error);
     return res.status(500).json({ message: "Error al obtener doctores" });
   }
 };
 
 citaController.getAppointmentsDays = async (req, res) => {
   try {
-    const { consultorio } = req.body;
+    const { no_empleado } = req.body;
 
     const today = new Date();
     const hoursToday = today.getUTCHours();
-    const date48HoursAfter = new Date(today);
-    date48HoursAfter.setUTCHours(hoursToday + 48);
+    const date72HoursAfter = new Date(today);
+    date72HoursAfter.setUTCHours(hoursToday + 72);
 
-    const citas_disponibles = await HorarioConsultorio.findAll({
+    const appointmentAvailable = await HorarioConsultorio.findAll({
+      attributes: ["fecha_hora_inicio", "fecha_hora_final", "id"],
       where: {
-        disponible: 1,
-        consultorio: consultorio,
+        disponible: true,
+        no_empleado: no_empleado,
         fecha_hora_inicio: {
-          [Sequelize.Op.gte]: date48HoursAfter,
+          [Sequelize.Op.gte]: date72HoursAfter,
         },
       },
       order: [["fecha_hora_inicio", "ASC"]],
-      attributes: ["fecha_hora_inicio", "fecha_hora_final", "id"],
     });
 
-    return res.json(citas_disponibles);
+    return res.send(appointmentAvailable);
   } catch (error) {
     console.error("Error al obtener citas:", error);
     return res.status(500).json({ message: "Error al obtener citas" });
@@ -189,7 +133,7 @@ citaController.scheduleAppointment = async (req, res) => {
         },
         {
           where: {
-            id: id,
+            id: citaExisting.id,
           },
         },
         { transaction: t }
@@ -210,6 +154,65 @@ citaController.scheduleAppointment = async (req, res) => {
 
     await t.commit();
     return res.json({ message: "Cita agendada" });
+  } catch (error) {
+    await t.rollback();
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+citaController.modifyAppointment = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const { id_cita, newHorarioId } = req.body;
+
+    const availableSchedule = await HorarioConsultorio.findOne({
+      where: {
+        id: newHorarioId,
+        disponible: 1,
+      },
+    });
+
+    if (!availableSchedule) {
+      return res.status(400).json({
+        message: "El nuevo horario seleccionado ya no está disponible",
+      });
+    }
+
+    const citaExisting = await Cita.findByPk(id_cita);
+
+    await HorarioConsultorio.update(
+      {
+        disponible: 1,
+      },
+      {
+        where: {
+          id: citaExisting.id_horario,
+        },
+      },
+      { transaction: t }
+    );
+
+    await citaExisting.update(
+      {
+        id_horario: newHorarioId,
+      },
+      { transaction: t }
+    );
+
+    await HorarioConsultorio.update(
+      {
+        disponible: 0,
+      },
+      {
+        where: {
+          id: newHorarioId,
+        },
+      },
+      { transaction: t }
+    );
+
+    await t.commit();
+    return res.json({ message: "Cita modificada" });
   } catch (error) {
     await t.rollback();
     return res.status(500).json({ message: error.message });

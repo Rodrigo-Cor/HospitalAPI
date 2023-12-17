@@ -8,7 +8,7 @@ const {
 } = require("../utils/hooks.util");
 
 const Paciente = sequelize.define(
-  "paciente",
+  "Paciente",
   {
     nss: {
       type: DataTypes.STRING(11),
