@@ -1,7 +1,11 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../utils/database.util");
 const Paciente = require("./Pacientes");
-const { getServerUser, hookInsertDeleteAfter } = require("../utils/hooks.util");
+const {
+  getServerUser,
+  hookInsertDeleteAfter,
+  getPreviousCurrentValues,
+} = require("../utils/hooks.util");
 
 const Cita = sequelize.define(
   "Cita",
@@ -40,6 +44,40 @@ const Cita = sequelize.define(
     timestamps: false,
     tableName: "citas",
     hooks: {
+      afterCreate: async (cita, options) => {
+        const id_cita = cita.dataValues["id"];
+        const { user, server } = await getServerUser();
+        await hookInsertDeleteAfter({
+          PK: id_cita,
+          type: "INSERT",
+          user,
+          server,
+          table: "citas",
+        });
+      },
+      afterUpdate: async (cita, options) => {
+        const { user, server } = await getServerUser();
+        const { previousValues, currentValues } = getPreviousCurrentValues({
+          table: cita,
+        });
+
+        for (const [field, previousValue] of Object.entries(previousValues)) {
+          let newValue = currentValues[field];
+
+          if (previousValue !== newValue) {
+            await Bitacora.create({
+              tabla: "citas",
+              operacion: "UPDATE",
+              campo: field,
+              valor: previousValue,
+              valor_nuevo: newValue,
+              usuario: user,
+              servidor: server,
+              PK: currentValues["id"],
+            });
+          }
+        }
+      },
       afterDestroy: async (cita, options) => {
         const id_cita = cita.dataValues["id"];
         const { user, server } = await getServerUser();

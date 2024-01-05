@@ -28,12 +28,24 @@ pacienteController.register = async (req, res) => {
       ap_materno,
       password,
       metodo_pago,
+      fecha_nacimiento,
     } = req.body;
 
     const user = await Usuario.findByPk(correo);
 
     if (user) {
       return res.status(400).json({ message: "El correo ya está registrado" });
+    }
+
+    const today = new Date();
+    const birthDate = new Date(fecha_nacimiento);
+    const age = today.getFullYear() - birthDate.getFullYear();
+
+    const minimumAge = 0;
+    const maximumAge = 118;
+
+    if (age < minimumAge || age > maximumAge) {
+      return res.status(400).json({ message: "La edad se debe encontrar entre 0 a 118 años" });
     }
 
     await Usuario.create(
@@ -54,6 +66,7 @@ pacienteController.register = async (req, res) => {
         correo: correo,
         telefono: telefono,
         metodo_pago: metodo_pago,
+        fecha_nacimiento: fecha_nacimiento,
       },
       { transaction: t }
     );

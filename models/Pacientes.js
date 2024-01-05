@@ -30,6 +30,10 @@ const Paciente = sequelize.define(
       type: DataTypes.STRING(16),
       allowNull: false,
     },
+    fecha_nacimiento: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
   },
   {
     timestamps: false,

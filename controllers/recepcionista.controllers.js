@@ -349,13 +349,28 @@ recepcionistaController.deleteConsultory = async (req, res) => {
       return res.status(400).send({ message: "Consultorio ocupado" });
     }
 
-    await Consultorio.destroy({
+    const existingConsultory = await Consultorio.findOne({
       where: {
         consultorio: consultorio,
       },
     });
 
-    return res.send({ message: "Consultorio eliminado" });
+    if (!existingConsultory) {
+      return res.status(404).send({ message: "El consultorio no existe" });
+    }
+
+    await Consultorio.update(
+      {
+        disponible: 1,
+      },
+      {
+        where: {
+          consultorio: consultorio,
+        },
+      },
+    );
+
+    return res.send({ message: "Consultorio disponible" });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }

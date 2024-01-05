@@ -110,8 +110,8 @@ const fetchDataRecipe = async (id) => {
   );
 
   const costoTotalServicios = recetaServicios.reduce(
-    (total, { cantidad_servicio, Servicio: { costo } }) =>
-      total + costo * cantidad_servicio,
+    (total, { cantidad_servicios, Servicio: { costo } }) =>
+      total + costo * cantidad_servicios,
     0
   );
 

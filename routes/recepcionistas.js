@@ -10,5 +10,6 @@ router.get("/listConsultorios", recepcionista.getConsultorios);
 router.post("/fetchScheduledAppointments", recepcionista.getScheduledAppointments);
 router.delete("/deletePatient", recepcionista.deletePatient);
 router.delete("/deleteDoctor", recepcionista.deleteDoctor);
+router.delete("/deleteConsultory", recepcionista.deleteConsultory);
 
 module.exports = router;

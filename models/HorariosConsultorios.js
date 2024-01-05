@@ -53,6 +53,29 @@ const HorarioConsultorio = sequelize.define(
           table: "horarios_consultorios",
         });
       },
+      afterUpdate: async (horarioconsultorio, options) => {
+        const { user, server } = await getServerUser();
+        const { previousValues, currentValues } = getPreviousCurrentValues({
+          table: horarioconsultorio,
+        });
+
+        for (const [field, previousValue] of Object.entries(previousValues)) {
+          let newValue = currentValues[field];
+
+          if (previousValue !== newValue) {
+            await Bitacora.create({
+              tabla: "horarios_consultorios",
+              operacion: "UPDATE",
+              campo: field,
+              valor: previousValue,
+              valor_nuevo: newValue,
+              usuario: user,
+              servidor: server,
+              PK: currentValues["id"],
+            });
+          }
+        }
+      },
       afterCreate: async (horarioconsultorio, options) => {
         const id_horario = horarioconsultorio.dataValues["id"];
         const { user, server } = await getServerUser();
