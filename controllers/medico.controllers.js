@@ -30,6 +30,16 @@ medicoController.register = async (req, res) => {
       password,
     } = req.body;
 
+    const existingMedico = await Medico.findOne({
+      where: {
+        no_empleado: no_empleado,
+      },
+    });
+
+    if (existingMedico) {
+      return res.status(400).json({ message: "El número de empleado ya está registrado" });
+    }
+
     const disponible = await Consultorio.findOne({
       where: {
         consultorio: consultorio,

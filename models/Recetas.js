@@ -9,6 +9,7 @@ const {
   hookInsertDeleteAfter,
   getPreviousCurrentValues,
 } = require("../utils/hooks.util");
+const Bitacora = require("./Bitacoras");
 
 const Receta = sequelize.define(
   "Recetas",

@@ -7,6 +7,7 @@ const {
   hookInsertDeleteAfter,
   getPreviousCurrentValues,
 } = require("../utils/hooks.util");
+const Bitacora = require("./Bitacoras");
 
 const Medico = sequelize.define(
   "Medico",

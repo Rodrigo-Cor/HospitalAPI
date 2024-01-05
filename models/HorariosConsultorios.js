@@ -1,7 +1,12 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../utils/database.util");
 const Cita = require("./Citas");
-const { getServerUser, hookInsertDeleteAfter } = require("../utils/hooks.util");
+const {
+  getServerUser,
+  hookInsertDeleteAfter,
+  getPreviousCurrentValues,
+} = require("../utils/hooks.util");
+const Bitacora = require("./Bitacoras");
 
 const HorarioConsultorio = sequelize.define(
   "HorarioConsultorio",

@@ -180,6 +180,10 @@ recepcionistaController.deleteDoctor = async (req, res) => {
     const { citas, correo, consultorio } =
       await fetchEmailAndAppointmentsDoctor(no_empleado);
 
+    if (citas.length > 0) {
+      return res.status(400).json({ message: "El médico tiene citas asignadas y no puede ser eliminado." });
+    }
+    
     const idHorarios = citas.map(({ id }) => id);
     const idCitas = citas.map(({ id_horario }) => id_horario);
 
