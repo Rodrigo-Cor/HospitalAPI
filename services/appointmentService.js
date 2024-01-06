@@ -152,6 +152,7 @@ const fetchAppointmentsPatientNoCancel = async (nss) => {
   return dataAppointments;
 };
 
+
 const fetchAppointmentsToday = async () => {
   const timeStart = new Date();
   const timeEnd = new Date();

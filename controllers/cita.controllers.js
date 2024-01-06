@@ -97,6 +97,37 @@ citaController.getAppointmentsDays = async (req, res) => {
   }
 };
 
+citaController.getAppointmentModify = async (req, res) => {
+  try {
+    const { no_empleado, id_horario } = req.body;
+
+    const today = new Date();
+    const hoursToday = today.getUTCHours();
+    const date72HoursAfter = new Date(today);
+    date72HoursAfter.setUTCHours(hoursToday + 72);
+
+    const appointmentAvailable = await HorarioConsultorio.findAll({
+      attributes: ["fecha_hora_inicio", "fecha_hora_final", "id"],
+      where: {
+        disponible: true,
+        no_empleado: no_empleado,
+        fecha_hora_inicio: {
+          [Sequelize.Op.gte]: date72HoursAfter,
+        },
+        id: {
+          [Sequelize.Op.ne]: id_horario,
+        },
+      },
+      order: [["fecha_hora_inicio", "ASC"]],
+    });
+
+    return res.send(appointmentAvailable);
+  } catch (error) {
+    console.error("Error al obtener citas:", error);
+    return res.status(500).json({ message: "Error al obtener citas" });
+  }
+};
+
 citaController.scheduleAppointment = async (req, res) => {
   const t = await sequelize.transaction();
   try {
@@ -163,7 +194,7 @@ citaController.scheduleAppointment = async (req, res) => {
 citaController.modifyAppointment = async (req, res) => {
   const t = await sequelize.transaction();
   try {
-    const { id_cita, newHorarioId } = req.body;
+    const { id_horario, newHorarioId } = req.body;
 
     const availableSchedule = await HorarioConsultorio.findOne({
       where: {
@@ -178,7 +209,13 @@ citaController.modifyAppointment = async (req, res) => {
       });
     }
 
-    const citaExisting = await Cita.findByPk(id_cita);
+    const citaExisting = await Cita.findOne({
+      where: {
+        id_horario: id_horario,
+        status: 1,
+      },
+      attributes: ["id", "id_horario"],
+    });
 
     await HorarioConsultorio.update(
       {

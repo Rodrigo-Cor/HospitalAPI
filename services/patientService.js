@@ -6,7 +6,7 @@ const Especialidad = require("../models/Especialidades");
 
 const fetchAppointmentsPatient = async (nss) =>
   await Cita.findAll({
-    attributes: ["id", "status"],
+    attributes: ["id", "status", "id_horario"],
     where: {
       nss: nss,
     },
@@ -15,7 +15,7 @@ const fetchAppointmentsPatient = async (nss) =>
       attributes: ["fecha_hora_inicio", "fecha_hora_final"],
       include: {
         model: Medico,
-        attributes: ["consultorio"],
+        attributes: ["consultorio", "no_empleado"],
         include: [
           {
             model: Usuario,

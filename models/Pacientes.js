@@ -33,7 +33,7 @@ const Paciente = sequelize.define(
     },
     fecha_nacimiento: {
       type: DataTypes.DATE,
-      allowNull: true,
+      allowNull: false,
     },
   },
   {

@@ -99,7 +99,7 @@ userController.getInformation = async (req, res) => {
 
     return res.json(user);
   } catch (error) {
-    return res.status(500).json({ message: error });
+    return res.status(500).json({ message: error.message });
   }
 };
 

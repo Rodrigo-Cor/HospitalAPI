@@ -45,7 +45,9 @@ pacienteController.register = async (req, res) => {
     const maximumAge = 118;
 
     if (age < minimumAge || age > maximumAge) {
-      return res.status(400).json({ message: "La edad se debe encontrar entre 0 a 118 años" });
+      return res
+        .status(400)
+        .json({ message: "La edad se debe encontrar entre 0 a 118 años" });
     }
 
     await Usuario.create(
@@ -87,20 +89,24 @@ pacienteController.showAppointment = async (req, res) => {
     const appointmentsInfoPatient = appointmentsPatient.map(
       ({
         id,
+        id_horario,
         status,
         HorarioConsultorio: {
           fecha_hora_inicio,
           fecha_hora_final,
           Medico: {
             consultorio,
+            no_empleado,
             Especialidad: { especialidad },
             Usuario: { nombre, ap_paterno, ap_materno },
           },
         },
       }) => ({
         id,
+        id_horario,
         medico: nombre + " " + ap_paterno + " " + ap_materno,
         consultorio,
+        no_empleado,
         especialidad,
         fecha_hora_inicio,
         fecha_hora_final,
