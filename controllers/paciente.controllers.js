@@ -4,10 +4,7 @@ const sequelize = require("../utils/database.util");
 const Paciente = require("../models/Pacientes.js");
 const Usuario = require("../models/Usuarios.js");
 const Cita = require("../models/Citas.js");
-const Medico = require("../models/Medicos.js");
 const HorarioConsultorio = require("../models/HorariosConsultorios.js");
-const Consultorio = require("../models/Consultorios.js");
-const Especialidad = require("../models/Especialidades.js");
 
 const { isOnTime } = require("../utils/appointment.util.js");
 const { fetchAppointmentsPatient } = require("../services/patientService.js");
@@ -53,7 +50,7 @@ pacienteController.register = async (req, res) => {
     await Usuario.create(
       {
         correo: correo,
-        tipo_usuario: 1,
+        tipo_usuario: 3,
         nombre: nombre,
         ap_paterno: ap_paterno,
         ap_materno: ap_materno,
@@ -101,6 +98,7 @@ pacienteController.showAppointment = async (req, res) => {
             Usuario: { nombre, ap_paterno, ap_materno },
           },
         },
+        Receta,
       }) => ({
         id,
         id_horario,
@@ -112,6 +110,7 @@ pacienteController.showAppointment = async (req, res) => {
         fecha_hora_final,
         onTime: isOnTime(fecha_hora_inicio),
         status,
+        id_receta: Receta?.id || null,
       })
     );
     return res.send(appointmentsInfoPatient);

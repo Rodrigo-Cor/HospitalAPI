@@ -1,5 +1,3 @@
-"use strict";
-
 const HorarioConsultorio = require("../models/HorariosConsultorios.js");
 const Cita = require("../models/Citas.js");
 
@@ -20,7 +18,6 @@ const citaController = {};
 citaController.getDoctors = async (req, res) => {
   try {
     const doctorsSchedulesAvailable = await fetchDoctorsSchedulesAvailable();
-    //return res.send(doctorsWithConsultorios);
 
     if (!doctorsSchedulesAvailable.length) {
       return res.json([]);
@@ -33,7 +30,7 @@ citaController.getDoctors = async (req, res) => {
         async ({ Especialidad: { especialidad } }) => {
           if (!existingSpecialties.includes(especialidad)) {
             existingSpecialties.push(especialidad);
-            const costo = await fetchConsultaCost("Consulta " + especialidad);
+            const costo = await fetchConsultaCost("Consulta " + especialidad.toLowerCase());
             return { especialidad, costo };
           } else {
             return null;

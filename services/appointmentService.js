@@ -4,9 +4,10 @@ const Especialidad = require("../models/Especialidades");
 const HorarioConsultorio = require("../models/HorariosConsultorios");
 const Cita = require("../models/Citas");
 const Paciente = require("../models/Pacientes");
-
+const Receta = require("../models/Recetas");
 const { Sequelize } = require("sequelize");
 const Consultorio = require("../models/Consultorios");
+const Status = require("../models/Status");
 
 const fetchDoctorsSchedulesAvailable = async () => {
   const today = new Date();
@@ -75,28 +76,30 @@ const fetchEmailAndAppointmentsDoctor = async (no_empleado) => {
   const {
     correo,
     Consultorio: { consultorio },
+    Usuario: { nombre, ap_paterno, ap_materno },
   } = await Medico.findByPk(no_empleado, {
     attributes: ["correo"],
-    include: {
-      model: Consultorio,
-      attributes: ["consultorio"],
-    },
+    include: [
+      {
+        model: Consultorio,
+        attributes: ["consultorio"],
+      },
+      {
+        model: Usuario,
+        attributes: ["nombre", "ap_paterno", "ap_materno"],
+      },
+    ],
   });
 
   const citas = await Cita.findAll({
-    attributes: ["id_horario", "id"],
+    attributes: ["id_horario", "id", "nss"],
     where: {
       status: 1,
     },
     include: {
       model: HorarioConsultorio,
       attributes: {
-        exclude: [
-          "fecha_hora_inicio",
-          "fecha_hora_final",
-          "disponible",
-          "no_empleado",
-        ],
+        exclude: ["disponible", "no_empleado"],
       },
       where: {
         no_empleado: no_empleado,
@@ -104,7 +107,12 @@ const fetchEmailAndAppointmentsDoctor = async (no_empleado) => {
     },
   });
 
-  return { correo, citas, consultorio };
+  return {
+    correo,
+    citas,
+    consultorio,
+    nameDoctor: nombre + " " + ap_paterno + " " + ap_materno,
+  };
 };
 
 const fetchAppointmentsPatientNoCancel = async (nss) => {
@@ -139,19 +147,19 @@ const fetchAppointmentsPatientNoCancel = async (nss) => {
           ],
         },
       },
-      {
-        model: Paciente,
-        attributes: ["correo", "metodo_pago"],
-        include: {
-          model: Usuario,
-          attributes: ["nombre", "ap_paterno", "ap_materno"],
-        },
-      },
     ],
   });
-  return dataAppointments;
-};
 
+  const dataPatient = await Paciente.findByPk(nss, {
+    attributes: ["correo"],
+    include: {
+      model: Usuario,
+      attributes: ["nombre", "ap_paterno", "ap_materno"],
+    },
+  });
+
+  return { dataAppointments, dataPatient };
+};
 
 const fetchAppointmentsToday = async () => {
   const timeStart = new Date();
@@ -160,20 +168,17 @@ const fetchAppointmentsToday = async () => {
   timeEnd.setHours(20, 0, 0, 0);
 
   const appointments = await Cita.findAll({
-    attributes: ["id", "nss"],
-    where: {
-      status: 1,
-    },
+    attributes: ["id", "nss", "status"],
     include: [
       {
         model: HorarioConsultorio,
         attributes: ["fecha_hora_inicio", "fecha_hora_final", "no_empleado"],
         where: {
           fecha_hora_inicio: {
-            [Sequelize.Op.and]: [
-              { [Sequelize.Op.lte]: timeEnd },
-              { [Sequelize.Op.gte]: timeStart },
-            ],
+            [Sequelize.Op.gte]: timeStart,
+          },
+          fecha_hora_final: {
+            [Sequelize.Op.lte]: timeEnd,
           },
         },
         include: {
@@ -199,6 +204,18 @@ const fetchAppointmentsToday = async () => {
           attributes: ["nombre", "ap_paterno", "ap_materno"],
         },
       },
+      {
+        model: Receta,
+        attributes: ["id"],
+      },
+      {
+        model: Status,
+        attributes: ["descripcion"],
+      },
+    ],
+    order: [
+      [HorarioConsultorio, "fecha_hora_inicio", "ASC"],
+      [HorarioConsultorio, Medico, "consultorio", "ASC"],
     ],
   });
   return appointments;

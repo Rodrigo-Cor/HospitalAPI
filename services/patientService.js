@@ -3,6 +3,7 @@ const HorarioConsultorio = require("../models/HorariosConsultorios");
 const Medico = require("../models/Medicos");
 const Usuario = require("../models/Usuarios");
 const Especialidad = require("../models/Especialidades");
+const Receta = require("../models/Recetas");
 
 const fetchAppointmentsPatient = async (nss) =>
   await Cita.findAll({
@@ -10,24 +11,30 @@ const fetchAppointmentsPatient = async (nss) =>
     where: {
       nss: nss,
     },
-    include: {
-      model: HorarioConsultorio,
-      attributes: ["fecha_hora_inicio", "fecha_hora_final"],
-      include: {
-        model: Medico,
-        attributes: ["consultorio", "no_empleado"],
-        include: [
-          {
-            model: Usuario,
-            attributes: ["nombre", "ap_paterno", "ap_materno"],
-          },
-          {
-            model: Especialidad,
-            attributes: ["especialidad"],
-          },
-        ],
+    include: [
+      {
+        model: HorarioConsultorio,
+        attributes: ["fecha_hora_inicio", "fecha_hora_final"],
+        include: {
+          model: Medico,
+          attributes: ["consultorio", "no_empleado"],
+          include: [
+            {
+              model: Usuario,
+              attributes: ["nombre", "ap_paterno", "ap_materno"],
+            },
+            {
+              model: Especialidad,
+              attributes: ["especialidad"],
+            },
+          ],
+        },
       },
-    },
+      {
+        model: Receta,
+        attributes: ["id"],
+      },
+    ],
     order: [
       [HorarioConsultorio, "fecha_hora_inicio", "ASC"],
       [HorarioConsultorio, Medico, "consultorio", "ASC"],

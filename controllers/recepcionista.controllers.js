@@ -31,7 +31,7 @@ recepcionistaController.register = async (req, res) => {
     await Usuario.create(
       {
         correo: correo,
-        tipo_usuario: "Recepcionista",
+        tipo_usuario: 1,
         nombre: nombre,
         ap_paterno: ap_paterno,
         ap_materno: ap_materno,
@@ -60,23 +60,25 @@ recepcionistaController.register = async (req, res) => {
 recepcionistaController.getScheduledAppointments = async (req, res) => {
   try {
     const { nss } = req.body;
-    const nssExisting = await Paciente.findByPk(nss);
-    if (!nssExisting)
-      return res.status(400).json({ dataAppointments: [], dataPatient: {} });
 
-    const sheduledAppointments = await fetchAppointmentsPatientNoCancel(nss);
-    if (sheduledAppointments.length === 0)
-      return res.json({ dataAppointments: [], dataPatient: {} });
+    const { dataAppointments, dataPatient } =
+      await fetchAppointmentsPatientNoCancel(nss);
 
-    const {
-      metodo_pago,
-      Usuario: { nombre, ap_paterno, ap_materno },
-    } = sheduledAppointments[0].Paciente;
-    const namePatient = nombre + " " + ap_paterno + " " + ap_materno;
+    if (!dataPatient)
+      return res.status(400).json({ message: "No existe el paciente" });
+
+    dataPatient.dataValues.nss = nss;
+
+    if (dataAppointments.length === 0)
+      return res.json({
+        dataSheduledAppointmets: [],
+        dataPatientCost: dataPatient,
+      });
+
     let costoTotal = 0;
 
     const dataSheduledAppointmets = await Promise.all(
-      sheduledAppointments.map(
+      dataAppointments.map(
         async ({
           id_horario,
           HorarioConsultorio: {
@@ -111,12 +113,14 @@ recepcionistaController.getScheduledAppointments = async (req, res) => {
         }
       )
     );
+
+    dataPatient.dataValues.costoTotal = costoTotal;
+
     return res.json({
-      dataAppointments: [...dataSheduledAppointmets],
-      dataPatient: { namePatient, costoTotal, metodo_pago },
+      dataSheduledAppointmets,
+      dataPatientCost: dataPatient,
     });
   } catch (error) {
-    console.log(error);
     return res.status(500).json({ message: error.message });
   }
 };
@@ -139,18 +143,18 @@ recepcionistaController.deletePatient = async (req, res) => {
         where: {
           id: idHorarios,
         },
+        individualHooks: true,
       },
       { transaction: t }
     );
 
-    await Cita.destroy(
-      {
-        where: {
-          id: idCitas,
-        },
+    await Cita.destroy({
+      where: {
+        id: idCitas,
       },
-      { transaction: t }
-    );
+      transaction: t,
+      individualHooks: true,
+    });
 
     await Usuario.update(
       {
@@ -160,6 +164,7 @@ recepcionistaController.deletePatient = async (req, res) => {
         where: {
           correo: correo,
         },
+        individualHooks: true,
       },
       { transaction: t }
     );
@@ -177,13 +182,27 @@ recepcionistaController.deleteDoctor = async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const { no_empleado } = req.body;
-    const { citas, correo, consultorio } =
+
+    const existingDoctor = await Medico.findByPk(no_empleado);
+
+    if (!existingDoctor) {
+      return res
+        .status(404)
+        .json({ message: "El médico no existe", citas: [], nameDoctor: "" });
+    }
+
+    const { citas, correo, consultorio, nameDoctor } =
       await fetchEmailAndAppointmentsDoctor(no_empleado);
 
     if (citas.length > 0) {
-      return res.status(400).json({ message: "El médico tiene citas asignadas y no puede ser eliminado." });
+      return res.status(400).json({
+        message: "El médico tiene citas asignadas",
+        citas,
+        nameDoctor,
+      });
     }
-    
+
+    /*
     const idHorarios = citas.map(({ id }) => id);
     const idCitas = citas.map(({ id_horario }) => id_horario);
 
@@ -202,6 +221,7 @@ recepcionistaController.deleteDoctor = async (req, res) => {
       individualHooks: true,
       transaction: t,
     });
+    */
 
     await Consultorio.update(
       {
@@ -255,45 +275,71 @@ recepcionistaController.getAppointmentsToday = async (req, res) => {
   try {
     const appointments = await fetchAppointmentsToday();
 
-    const dataAppointmentsToday = await Promise.all(
-      appointments.map(
-        async ({
-          id,
-          nss,
-          HorarioConsultorio: {
-            fecha_hora_inicio,
-            fecha_hora_final,
-            Medico: {
-              consultorio,
-              Usuario: {
-                nombre: name_doctor,
-                ap_paterno: paterno_doctor,
-                ap_materno: materno_doctor,
-              },
-              Especialidad: { especialidad },
-            },
-          },
-          Paciente: {
-            Usuario: {
-              nombre: name_patient,
-              ap_paterno: paterno_patient,
-              ap_materno: materno_patient,
-            },
-          },
-        }) => ({
-          id,
-          nss,
+    const dataAppointmentsToday = appointments.map(
+      ({
+        id,
+        nss,
+        status,
+        HorarioConsultorio: {
           fecha_hora_inicio,
           fecha_hora_final,
-          consultorio,
-          nameDoctor: name_doctor + " " + paterno_doctor + " " + materno_doctor,
-          namePatient:
-            name_patient + " " + paterno_patient + " " + materno_patient,
-          especialidad,
-        })
-      )
+          Medico: {
+            consultorio,
+            Usuario: {
+              nombre: name_doctor,
+              ap_paterno: paterno_doctor,
+              ap_materno: materno_doctor,
+            },
+            Especialidad: { especialidad },
+          },
+        },
+        Paciente: {
+          Usuario: {
+            nombre: name_patient,
+            ap_paterno: paterno_patient,
+            ap_materno: materno_patient,
+          },
+        },
+        Receta,
+        Status: { descripcion },
+      }) => ({
+        id,
+        nss,
+        fecha_hora_inicio,
+        fecha_hora_final,
+        consultorio,
+        nameDoctor: name_doctor + " " + paterno_doctor + " " + materno_doctor,
+        namePatient:
+          name_patient + " " + paterno_patient + " " + materno_patient,
+        especialidad,
+        receta: Receta?.id || null,
+        status,
+        descripcion,
+      })
     );
     return res.send(dataAppointmentsToday);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+recepcionistaController.updateStatus = async (req, res) => {
+  try {
+    const { id, status } = req.body;
+
+    await Cita.update(
+      {
+        status: status,
+      },
+      {
+        where: {
+          id: id,
+        },
+        individualHooks: true,
+      }
+    );
+
+    return res.json({ message: "Status actualizado" });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -330,6 +376,16 @@ recepcionistaController.deleteConsultory = async (req, res) => {
   try {
     const { consultorio } = req.body;
 
+    const existingConsultory = await Consultorio.findOne({
+      where: {
+        consultorio: consultorio,
+      },
+    });
+
+    if (!existingConsultory) {
+      return res.status(404).send({ message: "El consultorio no existe" });
+    }
+
     const doctorConsultory = await Medico.findOne({
       include: [
         {
@@ -353,16 +409,6 @@ recepcionistaController.deleteConsultory = async (req, res) => {
       return res.status(400).send({ message: "Consultorio ocupado" });
     }
 
-    const existingConsultory = await Consultorio.findOne({
-      where: {
-        consultorio: consultorio,
-      },
-    });
-
-    if (!existingConsultory) {
-      return res.status(404).send({ message: "El consultorio no existe" });
-    }
-
     await Consultorio.update(
       {
         disponible: 1,
@@ -371,7 +417,8 @@ recepcionistaController.deleteConsultory = async (req, res) => {
         where: {
           consultorio: consultorio,
         },
-      },
+        individualHooks: true,
+      }
     );
 
     return res.send({ message: "Consultorio disponible" });

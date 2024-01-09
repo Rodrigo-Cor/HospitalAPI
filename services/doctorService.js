@@ -29,7 +29,7 @@ const fetchAppointmentsDoctor = async (no_empleado) =>
       },
       {
         model: Receta,
-        attributes: ["id", "diagnostico"],
+        attributes: ["id"],
       },
     ],
     order: [[HorarioConsultorio, "fecha_hora_inicio", "ASC"]],

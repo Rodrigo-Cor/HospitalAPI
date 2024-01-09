@@ -3,13 +3,17 @@ const router = express.Router();
 
 const recepcionista = require("../controllers/recepcionista.controllers");
 
-router.post("/register", recepcionista.register);
-router.post("/setSchedule", recepcionista.setSchedule);
+//router.post("/register", recepcionista.register);
+//router.post("/setSchedule", recepcionista.setSchedule);
 router.get("/fetchAppointmentsToday", recepcionista.getAppointmentsToday);
 router.get("/listConsultorios", recepcionista.getConsultorios);
-router.post("/fetchScheduledAppointments", recepcionista.getScheduledAppointments);
+router.post(
+  "/fetchScheduledAppointments",
+  recepcionista.getScheduledAppointments
+);
 router.delete("/deletePatient", recepcionista.deletePatient);
 router.delete("/deleteDoctor", recepcionista.deleteDoctor);
 router.delete("/deleteConsultory", recepcionista.deleteConsultory);
+router.put("/modifyStatus", recepcionista.updateStatus);
 
 module.exports = router;

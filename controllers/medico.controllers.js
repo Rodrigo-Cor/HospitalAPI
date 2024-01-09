@@ -96,7 +96,6 @@ medicoController.register = async (req, res) => {
     await t.commit();
     return res.json({ message: "Médico dado de alta" });
   } catch (error) {
-    console.log(error);
     await t.rollback();
     return res.status(500).json({ message: error.message });
   }
@@ -107,7 +106,6 @@ medicoController.showAppointment = async (req, res) => {
     const { no_empleado } = req.body;
 
     const appointmentsDoctor = await fetchAppointmentsDoctor(no_empleado);
-    //return res.send(appointmentsDoctor);
     const appointmentsInformationDoctor = appointmentsDoctor.map(
       ({
         nss,
@@ -126,7 +124,6 @@ medicoController.showAppointment = async (req, res) => {
         fecha_hora_final,
         status,
         id_receta: Receta?.id || null,
-        diagnostico: Receta?.diagnostico || null,
       })
     );
     return res.json(appointmentsInformationDoctor);

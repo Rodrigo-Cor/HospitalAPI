@@ -55,6 +55,7 @@ recetaController.createRecipe = async (req, res) => {
 
     return res.status(201).json({ message: "Receta creada" });
   } catch (error) {
+    console.log(error.message);
     return res.status(500).json({ mensaje: error.message });
   }
 };

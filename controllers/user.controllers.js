@@ -4,6 +4,7 @@ const Usuario = require("../models/Usuarios.js");
 const Paciente = require("../models/Pacientes.js");
 const Medico = require("../models/Medicos.js");
 const Recepcionista = require("../models/Recepcionistas.js");
+const Especialidad = require("../models/Especialidades.js");
 const sequelize = require("../utils/database.util");
 const TipoUsuario = require("../models/TipoUsuarios.js");
 
@@ -63,7 +64,6 @@ userController.loginUser = async (req, res) => {
   }
 };
 
-
 userController.getInformation = async (req, res) => {
   const { correo, tipo_usuario } = req.body;
   try {
@@ -74,28 +74,62 @@ userController.getInformation = async (req, res) => {
     };
 
     const typeUser = userModels[tipo_usuario];
-    const user = (
-      await typeUser.findOne({
-        where: {
-          correo: correo,
-        },
-        attributes: { exclude: ["correo"] },
-        include: [
-          {
-            model: Usuario,
-            attributes: {
-              exclude: ["correo", "password", "fecha_fin"],
-            },
+
+    let user = {};
+
+    if (tipo_usuario === "Medico") {
+      user = (
+        await Medico.findOne({
+          where: {
+            correo: correo,
           },
-        ],
-      })
-    ).toJSON();
+          attributes: { exclude: ["correo"] },
+          include: [
+            {
+              model: Usuario,
+              attributes: {
+                exclude: ["correo", "password", "fecha_fin"],
+              },
+            },
+            {
+              model: Especialidad,
+              attributes: ["especialidad"],
+            },
+          ],
+        })
+      ).toJSON();
+    } else {
+      user = (
+        await typeUser.findOne({
+          where: {
+            correo: correo,
+          },
+          attributes: { exclude: ["correo"] },
+          include: [
+            {
+              model: Usuario,
+              attributes: {
+                exclude: ["correo", "password", "fecha_fin"],
+              },
+            },
+          ],
+        })
+      ).toJSON();
+    }
 
     const {
       Usuario: { nombre, ap_paterno, ap_materno },
     } = user;
     user.nombreCompleto = nombre + " " + ap_paterno + " " + ap_materno;
     delete user.Usuario;
+
+    if (tipo_usuario === "Medico") {
+      const {
+        Especialidad: { especialidad },
+      } = user;
+      user.especialidad = especialidad;
+      delete user.Especialidad;
+    }
 
     return res.json(user);
   } catch (error) {
@@ -157,6 +191,5 @@ userController.deletePatient = async (req, res) => {
     return res.status(500).json({ message: error });
   }
 };
-
 
 module.exports = userController;

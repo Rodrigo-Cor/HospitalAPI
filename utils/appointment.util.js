@@ -3,14 +3,13 @@ const HorarioConsultorio = require("../models/HorariosConsultorios.js");
 const Servicio = require("../models/Servicios.js");
 
 const fetchConsultaCost = async (nombre) => {
-  console.log(nombre);
   const servicio = await Servicio.findOne({
     where: {
       nombre: nombre,
     },
     attributes: ["costo"],
   });
-  return servicio?.costo || 0;
+  return servicio?.costo || 1000;
 };
 
 const isOnTime = (date) => {
@@ -18,7 +17,7 @@ const isOnTime = (date) => {
 
   const dateAppointment = new Date(date);
   dateAppointment.setHours(dateAppointment.getHours() - 48);
-  
+
   return today < dateAppointment;
 };
 
