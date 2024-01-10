@@ -97,6 +97,7 @@ medicoController.register = async (req, res) => {
     return res.json({ message: "Médico dado de alta" });
   } catch (error) {
     await t.rollback();
+    console.log(error.message);
     return res.status(500).json({ message: error.message });
   }
 };

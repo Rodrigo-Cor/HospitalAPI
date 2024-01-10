@@ -37,7 +37,7 @@ const Receta = sequelize.define(
     tableName: "recetas",
     hooks: {
       afterCreate: async (recipe, options) => {
-        const id_receta = recipe.dataValues["id","diagnostico"];
+        const id_receta = recipe.dataValues["id"];
         const { user, server } = await getServerUser();
         await hookInsertDeleteAfter({
           PK: id_receta,
